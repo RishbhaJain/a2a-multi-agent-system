@@ -12,7 +12,7 @@ from a2a.types import (
     TextPart,
 )
 
-PUBLIC_AGENT_CARD_PATH = "/.well-known/agent.json"
+PUBLIC_AGENT_CARD_PATH = "/.well-known/agent-card.json"
 BASE_URL = "http://localhost:9999"
 
 
@@ -48,7 +48,7 @@ async def main() -> None:
         message_payload = Message(
             role=Role.user,
             messageId=str(uuid.uuid4()),
-            parts=[Part(root=TextPart(text="Hello, how are you?"))],
+            parts=[Part(root=TextPart(text="What's 15 * 8?"))],
         )
         request = SendMessageRequest(
             id=str(uuid.uuid4()),
