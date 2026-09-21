@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """Code Execution Agent - Generates and executes Python code locally"""
 
+import asyncio
 import os
-import subprocess
-import tempfile
-import sys
 import google.generativeai as genai
-import re
-from typing import Optional
+
+from execution_sandbox import UnsafeCodeError, execute_python
 
 
 class CodeExecutionAgent:
@@ -81,36 +79,23 @@ Generate the code now:"""
         return code.strip()
     
     async def _execute_code(self, code: str) -> str:
-        """Safely execute Python code and return the result"""
+        """Execute generated Python under the constrained runner."""
         try:
-            # Create a temporary file to execute the code
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-                f.write(code)
-                temp_file = f.name
-            
-            # Execute the code in a subprocess with timeout
-            result = subprocess.run(
-                [sys.executable, temp_file],
-                capture_output=True,
-                text=True,
-                timeout=30,  # 30 second timeout
-                cwd=tempfile.gettempdir()
-            )
-            
-            # Clean up the temporary file
-            os.unlink(temp_file)
-            
-            if result.returncode == 0:
-                output = result.stdout.strip()
+            result = await asyncio.to_thread(execute_python, code)
+
+            if result.timed_out:
+                return "Error: Code execution timed out (5 seconds)"
+            if result.succeeded:
+                output = result.stdout
                 if not output:
                     return "Code executed successfully but produced no output."
+                if result.output_truncated:
+                    return f"{output}\n[output truncated]"
                 return output
-            else:
-                error = result.stderr.strip()
-                return f"Execution error: {error}"
-                
-        except subprocess.TimeoutExpired:
-            return "Error: Code execution timed out (30 seconds)"
+            error = result.stderr or f"process exited with code {result.returncode}"
+            return f"Execution error: {error}"
+        except UnsafeCodeError as exc:
+            return f"Error: Generated code rejected by safety policy: {exc}"
         except Exception as e:
             return f"Error executing code: {str(e)}"
     

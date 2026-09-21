@@ -28,7 +28,8 @@ A sophisticated Agent-to-Agent (A2A) system that intelligently routes requests t
 
 ### 💻 **Code Execution Agent**
 - Generates Python code using Gemini AI
-- Executes code locally with safety measures
+- Validates generated code with an AST policy before execution
+- Runs code in an isolated Python subprocess with CPU, memory, file, and output limits
 - Solves complex programming and mathematical problems
 - Returns only the final numerical result
 - Handles prime number calculations, algorithms, and mathematical computations
@@ -234,6 +235,19 @@ python test_integrated_system.py
 - Use least-privilege access for API keys
 - Monitor API usage for unusual activity
 - Keep dependencies updated for security patches
+
+### Constrained Code Execution
+
+Generated Python is checked before execution. The policy blocks filesystem,
+process, network, dynamic-evaluation, and dunder-based escape primitives while
+allowing a small set of computation-focused standard-library modules. Accepted
+programs run with Python isolation flags, a five-second timeout, memory and file
+limits, and bounded captured output. The policy has credential-free regression
+tests in CI.
+
+This is defense in depth for a portfolio system, not a hardened isolation
+boundary. Adversarial untrusted code should run in a network-denied container or
+microVM with an unprivileged user and a read-only filesystem.
 
 ## 🔍 Troubleshooting
 
