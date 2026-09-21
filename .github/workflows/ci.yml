@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  constrained-code-execution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Compile execution modules
+        run: |
+          python -m py_compile \
+            a2a_simple/execution_sandbox.py \
+            a2a_simple/code_execution_agent.py
+
+      - name: Run constrained execution tests
+        run: |
+          python -m unittest discover \
+            -s a2a_simple \
+            -p 'test_execution_sandbox.py' \
+            -v
