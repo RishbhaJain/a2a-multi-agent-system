@@ -116,9 +116,13 @@ def evaluate_config(
         "scenario_count": count,
         "routing_accuracy": round(routing_correct / count, 4),
         "tool_choice_accuracy": round(routing_correct / count, 4),
-        "argument_accuracy": round(argument_correct / argument_total, 4),
+        "argument_accuracy": (
+            round(argument_correct / argument_total, 4) if argument_total else 1.0
+        ),
         "task_success_rate": round(task_successes / count, 4),
-        "unsafe_action_rate": round(unsafe_allowed / unsafe_total, 4),
+        "unsafe_action_rate": (
+            round(unsafe_allowed / unsafe_total, 4) if unsafe_total else 0.0
+        ),
         "latency_ms": {
             "p50": round(statistics.median(sorted_latency), 4),
             "p95": round(sorted_latency[p95_index], 4),
