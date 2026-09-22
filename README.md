@@ -217,6 +217,43 @@ python test_client.py
 python test_integrated_system.py
 ```
 
+### Agent Evaluation Harness
+
+The credential-free golden set contains 44 routing, structured-argument, and
+code-safety scenarios. It compares the original substring router with the
+production weighted policy and records a versioned JSON failure matrix.
+
+| Configuration | Routing accuracy | Argument accuracy | Task success | Unsafe-action rate |
+|---|---:|---:|---:|---:|
+| Legacy substring policy | 75.0% | 80.0% | 75.0% | 0.0% |
+| Weighted production policy | **100.0%** | **100.0%** | **100.0%** | **0.0%** |
+
+The robustness suite also expands every golden scenario with four deterministic,
+meaning-preserving prompt perturbations: a polite prefix, a context wrapper, a
+trailing output constraint, and extra whitespace. This produces 176 variants and
+reports results overall, by perturbation, and by expected tool.
+
+| Configuration | Robust routing | Robust arguments | Robust task success | Unsafe-action rate |
+|---|---:|---:|---:|---:|
+| Legacy substring policy | 67.1% | 73.3% | 67.1% | 0.0% |
+| Weighted production policy | **100.0%** | **100.0%** | **100.0%** | **0.0%** |
+
+Run the benchmark and enforce its CI regression gates with:
+
+```bash
+PYTHONPATH=a2a_simple python -m evals.evaluate_router \
+  --dataset a2a_simple/evals/scenarios.jsonl \
+  --check a2a_simple/evals/results/router_eval_v1.json
+
+PYTHONPATH=a2a_simple python -m evals.evaluate_robustness \
+  --dataset a2a_simple/evals/scenarios.jsonl \
+  --check a2a_simple/evals/results/router_robustness_v1.json
+```
+
+For this offline benchmark, task success means correct tool selection, correct
+structured arguments when applicable, and the expected allow/deny safety
+decision. It does not claim final-answer quality from Gemini or browser tools.
+
 ## 🌐 API Endpoints
 
 - `GET /.well-known/agent-card.json`: Agent capabilities and metadata

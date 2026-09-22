@@ -5,6 +5,7 @@ from image_agent import ImageRecognitionAgent
 from web_agent import WebBrowsingAgent
 from memory_agent import MemoryAgent
 from code_execution_agent import CodeExecutionAgent
+from routing_policy import classify_question
 
 
 class RouterAgent:
@@ -109,79 +110,8 @@ class RouterAgent:
             return f"Error parsing retrieve request: {str(e)}"
 
     def _classify_question(self, question: str) -> str:
-        """Classify the question as math, hash, web, or unknown"""
-        question_lower = question.lower()
-        
-        # Hash operation keywords
-        hash_keywords = [
-            "hash", "md5", "sha512", "sha", "execute", "sequence", 
-            "operations", "cryptographic", "digest"
-        ]
-        
-        # Math operation keywords
-        math_keywords = [
-            "solve", "calculate", "what is", "math", "arithmetic", 
-            "algebra", "equation", "derivative", "integral", "area", 
-            "perimeter", "volume", "plus", "minus", "times", "divided"
-        ]
-        
-        # Web browsing keywords
-        web_keywords = [
-            "go to", "visit", "browse", "website", "play", "game", 
-            "tic-tac-toe", "ttt.puppy9.com", "secret number", "congratulation",
-            "win", "browser", "web", "url", "http", "https"
-        ]
-        
-        # Memory keywords
-        memory_keywords = [
-            "remember", "store", "save", "recall", "retrieve", "memory",
-            "previously", "earlier", "before", "past", "stored", "saved",
-            "what was", "paired with", "check your memory", "tell me"
-        ]
-        
-        # Code execution keywords
-        code_keywords = [
-            "write a program", "program that", "compute", "algorithm", "prime numbers",
-            "sum of squares", "modulo", "programming", "code", "execute", "generate code",
-            "write code", "implement", "calculate", "complex", "mathematical problem",
-            "step by step", "numerical result", "final result", "output the result"
-        ]
-        
-        # Check for hash operations
-        hash_score = sum(1 for keyword in hash_keywords if keyword in question_lower)
-        
-        # Check for math operations
-        math_score = sum(1 for keyword in math_keywords if keyword in question_lower)
-        
-        # Check for web browsing
-        web_score = sum(1 for keyword in web_keywords if keyword in question_lower)
-        
-        # Check for memory operations
-        memory_score = sum(1 for keyword in memory_keywords if keyword in question_lower)
-        
-        # Check for code execution operations
-        code_score = sum(1 for keyword in code_keywords if keyword in question_lower)
-        
-        # Also check for mathematical symbols
-        math_symbols = ["+", "-", "*", "/", "=", "^", "√", "π", "x", "y"]
-        math_symbol_count = sum(1 for symbol in math_symbols if symbol in question)
-        
-        if math_symbol_count > 0:
-            math_score += math_symbol_count
-        
-        # Determine the classification (memory has highest priority, then code)
-        if memory_score > 0:
-            return "memory"
-        elif code_score > 0:
-            return "code"
-        elif web_score > 0:
-            return "web"
-        elif hash_score > math_score and hash_score > 0:
-            return "hash"
-        elif math_score > 0:
-            return "math"
-        else:
-            return "unknown"
+        """Classify a request with the versioned, evaluated routing policy."""
+        return classify_question(question).tool
 
     def _get_help_message(self) -> str:
         """Return a help message when question type is unknown"""

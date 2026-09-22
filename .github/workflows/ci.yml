@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  constrained-code-execution:
+  agent-quality-gates:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -23,11 +23,15 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Compile execution modules
+      - name: Compile evaluation and execution modules
         run: |
           python -m py_compile \
             a2a_simple/execution_sandbox.py \
-            a2a_simple/code_execution_agent.py
+            a2a_simple/code_execution_agent.py \
+            a2a_simple/routing_policy.py \
+            a2a_simple/evals/evaluate_router.py \
+            a2a_simple/evals/evaluate_robustness.py \
+            a2a_simple/test_router_robustness.py
 
       - name: Run constrained execution tests
         run: |
@@ -35,3 +39,20 @@ jobs:
             -s a2a_simple \
             -p 'test_execution_sandbox.py' \
             -v
+
+      - name: Enforce routing and safety regression gates
+        env:
+          PYTHONPATH: a2a_simple
+        run: |
+          python -m evals.evaluate_router \
+            --dataset a2a_simple/evals/scenarios.jsonl \
+            --check a2a_simple/evals/results/router_eval_v1.json
+
+      - name: Test router robustness under prompt perturbations
+        env:
+          PYTHONPATH: a2a_simple
+        run: |
+          python -m unittest a2a_simple.test_router_robustness -v
+          python -m evals.evaluate_robustness \
+            --dataset a2a_simple/evals/scenarios.jsonl \
+            --check a2a_simple/evals/results/router_robustness_v1.json

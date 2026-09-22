@@ -1,0 +1,890 @@
+{
+  "schema_version": 1,
+  "source_dataset": "scenarios.jsonl",
+  "source_scenarios": 44,
+  "perturbations": [
+    "polite_prefix",
+    "context_wrapper",
+    "trailing_constraint",
+    "extra_whitespace"
+  ],
+  "variant_count": 176,
+  "configs": {
+    "legacy_substring_v1": {
+      "overall": {
+        "scenario_count": 176,
+        "routing_accuracy": 0.6705,
+        "tool_choice_accuracy": 0.6705,
+        "argument_accuracy": 0.7333,
+        "task_success_rate": 0.6705,
+        "unsafe_action_rate": 0.0,
+        "latency_ms": {
+          "p50": 0.011,
+          "p95": 0.0242
+        },
+        "failure_counts": {
+          "arguments": 16,
+          "routing": 58
+        }
+      },
+      "by_perturbation": {
+        "polite_prefix": {
+          "scenario_count": 44,
+          "routing_accuracy": 0.75,
+          "tool_choice_accuracy": 0.75,
+          "argument_accuracy": 0.8,
+          "task_success_rate": 0.75,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.011,
+            "p95": 0.0246
+          },
+          "failure_counts": {
+            "arguments": 3,
+            "routing": 11
+          }
+        },
+        "context_wrapper": {
+          "scenario_count": 44,
+          "routing_accuracy": 0.5909,
+          "tool_choice_accuracy": 0.5909,
+          "argument_accuracy": 0.6667,
+          "task_success_rate": 0.5909,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.011,
+            "p95": 0.012
+          },
+          "failure_counts": {
+            "arguments": 5,
+            "routing": 18
+          }
+        },
+        "trailing_constraint": {
+          "scenario_count": 44,
+          "routing_accuracy": 0.6818,
+          "tool_choice_accuracy": 0.6818,
+          "argument_accuracy": 0.7333,
+          "task_success_rate": 0.6818,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.011,
+            "p95": 0.0118
+          },
+          "failure_counts": {
+            "arguments": 4,
+            "routing": 14
+          }
+        },
+        "extra_whitespace": {
+          "scenario_count": 44,
+          "routing_accuracy": 0.6591,
+          "tool_choice_accuracy": 0.6591,
+          "argument_accuracy": 0.7333,
+          "task_success_rate": 0.6591,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0098,
+            "p95": 0.0108
+          },
+          "failure_counts": {
+            "arguments": 4,
+            "routing": 15
+          }
+        }
+      },
+      "by_expected_tool": {
+        "code": {
+          "scenario_count": 64,
+          "routing_accuracy": 0.8281,
+          "tool_choice_accuracy": 0.8281,
+          "argument_accuracy": 1.0,
+          "task_success_rate": 0.8281,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0113,
+            "p95": 0.0127
+          },
+          "failure_counts": {
+            "routing": 11
+          }
+        },
+        "hash": {
+          "scenario_count": 24,
+          "routing_accuracy": 0.2083,
+          "tool_choice_accuracy": 0.2083,
+          "argument_accuracy": 0.25,
+          "task_success_rate": 0.2083,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0114,
+            "p95": 0.0252
+          },
+          "failure_counts": {
+            "arguments": 15,
+            "routing": 19
+          }
+        },
+        "math": {
+          "scenario_count": 24,
+          "routing_accuracy": 0.4583,
+          "tool_choice_accuracy": 0.4583,
+          "argument_accuracy": 1.0,
+          "task_success_rate": 0.4583,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0104,
+            "p95": 0.011
+          },
+          "failure_counts": {
+            "routing": 13
+          }
+        },
+        "memory": {
+          "scenario_count": 24,
+          "routing_accuracy": 0.9583,
+          "tool_choice_accuracy": 0.9583,
+          "argument_accuracy": 0.9583,
+          "task_success_rate": 0.9583,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.01,
+            "p95": 0.0132
+          },
+          "failure_counts": {
+            "arguments": 1,
+            "routing": 1
+          }
+        },
+        "unknown": {
+          "scenario_count": 16,
+          "routing_accuracy": 0.3125,
+          "tool_choice_accuracy": 0.3125,
+          "argument_accuracy": 1.0,
+          "task_success_rate": 0.3125,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0106,
+            "p95": 0.0132
+          },
+          "failure_counts": {
+            "routing": 11
+          }
+        },
+        "web": {
+          "scenario_count": 24,
+          "routing_accuracy": 0.875,
+          "tool_choice_accuracy": 0.875,
+          "argument_accuracy": 1.0,
+          "task_success_rate": 0.875,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0112,
+            "p95": 0.0115
+          },
+          "failure_counts": {
+            "routing": 3
+          }
+        }
+      }
+    },
+    "weighted_rules_v2": {
+      "overall": {
+        "scenario_count": 176,
+        "routing_accuracy": 1.0,
+        "tool_choice_accuracy": 1.0,
+        "argument_accuracy": 1.0,
+        "task_success_rate": 1.0,
+        "unsafe_action_rate": 0.0,
+        "latency_ms": {
+          "p50": 0.0208,
+          "p95": 0.0393
+        },
+        "failure_counts": {}
+      },
+      "by_perturbation": {
+        "polite_prefix": {
+          "scenario_count": 44,
+          "routing_accuracy": 1.0,
+          "tool_choice_accuracy": 1.0,
+          "argument_accuracy": 1.0,
+          "task_success_rate": 1.0,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0215,
+            "p95": 0.025
+          },
+          "failure_counts": {}
+        },
+        "context_wrapper": {
+          "scenario_count": 44,
+          "routing_accuracy": 1.0,
+          "tool_choice_accuracy": 1.0,
+          "argument_accuracy": 1.0,
+          "task_success_rate": 1.0,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0219,
+            "p95": 0.0245
+          },
+          "failure_counts": {}
+        },
+        "trailing_constraint": {
+          "scenario_count": 44,
+          "routing_accuracy": 1.0,
+          "tool_choice_accuracy": 1.0,
+          "argument_accuracy": 1.0,
+          "task_success_rate": 1.0,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0211,
+            "p95": 0.0349
+          },
+          "failure_counts": {}
+        },
+        "extra_whitespace": {
+          "scenario_count": 44,
+          "routing_accuracy": 1.0,
+          "tool_choice_accuracy": 1.0,
+          "argument_accuracy": 1.0,
+          "task_success_rate": 1.0,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0164,
+            "p95": 0.0201
+          },
+          "failure_counts": {}
+        }
+      },
+      "by_expected_tool": {
+        "code": {
+          "scenario_count": 64,
+          "routing_accuracy": 1.0,
+          "tool_choice_accuracy": 1.0,
+          "argument_accuracy": 1.0,
+          "task_success_rate": 1.0,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0224,
+            "p95": 0.0404
+          },
+          "failure_counts": {}
+        },
+        "hash": {
+          "scenario_count": 24,
+          "routing_accuracy": 1.0,
+          "tool_choice_accuracy": 1.0,
+          "argument_accuracy": 1.0,
+          "task_success_rate": 1.0,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0208,
+            "p95": 0.0279
+          },
+          "failure_counts": {}
+        },
+        "math": {
+          "scenario_count": 24,
+          "routing_accuracy": 1.0,
+          "tool_choice_accuracy": 1.0,
+          "argument_accuracy": 1.0,
+          "task_success_rate": 1.0,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0197,
+            "p95": 0.0255
+          },
+          "failure_counts": {}
+        },
+        "memory": {
+          "scenario_count": 24,
+          "routing_accuracy": 1.0,
+          "tool_choice_accuracy": 1.0,
+          "argument_accuracy": 1.0,
+          "task_success_rate": 1.0,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0179,
+            "p95": 0.019
+          },
+          "failure_counts": {}
+        },
+        "unknown": {
+          "scenario_count": 16,
+          "routing_accuracy": 1.0,
+          "tool_choice_accuracy": 1.0,
+          "argument_accuracy": 1.0,
+          "task_success_rate": 1.0,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0176,
+            "p95": 0.0184
+          },
+          "failure_counts": {}
+        },
+        "web": {
+          "scenario_count": 24,
+          "routing_accuracy": 1.0,
+          "tool_choice_accuracy": 1.0,
+          "argument_accuracy": 1.0,
+          "task_success_rate": 1.0,
+          "unsafe_action_rate": 0.0,
+          "latency_ms": {
+            "p50": 0.0214,
+            "p95": 0.0228
+          },
+          "failure_counts": {}
+        }
+      }
+    }
+  },
+  "failures": {
+    "legacy_substring_v1": [
+      {
+        "id": "math-01::context_wrapper",
+        "expected_tool": "math",
+        "predicted_tool": "web",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "math-02::context_wrapper",
+        "expected_tool": "math",
+        "predicted_tool": "web",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "math-03::context_wrapper",
+        "expected_tool": "math",
+        "predicted_tool": "web",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "math-04::polite_prefix",
+        "expected_tool": "math",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "math-04::context_wrapper",
+        "expected_tool": "math",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "math-04::trailing_constraint",
+        "expected_tool": "math",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "math-04::extra_whitespace",
+        "expected_tool": "math",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "math-05::polite_prefix",
+        "expected_tool": "math",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "math-05::context_wrapper",
+        "expected_tool": "math",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "math-05::trailing_constraint",
+        "expected_tool": "math",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "math-05::extra_whitespace",
+        "expected_tool": "math",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "math-06::context_wrapper",
+        "expected_tool": "math",
+        "predicted_tool": "web",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "math-06::extra_whitespace",
+        "expected_tool": "math",
+        "predicted_tool": "unknown",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "hash-01::polite_prefix",
+        "expected_tool": "hash",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "hash-01::context_wrapper",
+        "expected_tool": "hash",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "hash-01::trailing_constraint",
+        "expected_tool": "hash",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "hash-01::extra_whitespace",
+        "expected_tool": "hash",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "hash-02::polite_prefix",
+        "expected_tool": "hash",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "hash-02::context_wrapper",
+        "expected_tool": "hash",
+        "predicted_tool": "web",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "hash-02::trailing_constraint",
+        "expected_tool": "hash",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "hash-02::extra_whitespace",
+        "expected_tool": "hash",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "hash-03::polite_prefix",
+        "expected_tool": "hash",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "hash-03::context_wrapper",
+        "expected_tool": "hash",
+        "predicted_tool": "web",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "hash-03::trailing_constraint",
+        "expected_tool": "hash",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "hash-03::extra_whitespace",
+        "expected_tool": "hash",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "hash-04::polite_prefix",
+        "expected_tool": "hash",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "hash-04::context_wrapper",
+        "expected_tool": "hash",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "hash-04::trailing_constraint",
+        "expected_tool": "hash",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "hash-04::extra_whitespace",
+        "expected_tool": "hash",
+        "predicted_tool": "code",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "hash-05::context_wrapper",
+        "expected_tool": "hash",
+        "predicted_tool": "web",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "hash-06::context_wrapper",
+        "expected_tool": "hash",
+        "predicted_tool": "web",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "hash-06::trailing_constraint",
+        "expected_tool": "hash",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "web-05::polite_prefix",
+        "expected_tool": "web",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "web-05::trailing_constraint",
+        "expected_tool": "web",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "web-05::extra_whitespace",
+        "expected_tool": "web",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "memory-03::extra_whitespace",
+        "expected_tool": "memory",
+        "predicted_tool": "unknown",
+        "success": false,
+        "failure_categories": [
+          "routing",
+          "arguments"
+        ]
+      },
+      {
+        "id": "code-01::extra_whitespace",
+        "expected_tool": "code",
+        "predicted_tool": "unknown",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "code-03::polite_prefix",
+        "expected_tool": "code",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "code-03::context_wrapper",
+        "expected_tool": "code",
+        "predicted_tool": "web",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "code-03::trailing_constraint",
+        "expected_tool": "code",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "code-03::extra_whitespace",
+        "expected_tool": "code",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "code-05::polite_prefix",
+        "expected_tool": "code",
+        "predicted_tool": "unknown",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "code-05::context_wrapper",
+        "expected_tool": "code",
+        "predicted_tool": "web",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "code-05::trailing_constraint",
+        "expected_tool": "code",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "code-05::extra_whitespace",
+        "expected_tool": "code",
+        "predicted_tool": "unknown",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "unknown-01::polite_prefix",
+        "expected_tool": "unknown",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "unknown-01::context_wrapper",
+        "expected_tool": "unknown",
+        "predicted_tool": "web",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "unknown-01::trailing_constraint",
+        "expected_tool": "unknown",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "unknown-01::extra_whitespace",
+        "expected_tool": "unknown",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "unknown-02::polite_prefix",
+        "expected_tool": "unknown",
+        "predicted_tool": "memory",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "unknown-02::context_wrapper",
+        "expected_tool": "unknown",
+        "predicted_tool": "memory",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "unknown-02::trailing_constraint",
+        "expected_tool": "unknown",
+        "predicted_tool": "memory",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "unknown-03::context_wrapper",
+        "expected_tool": "unknown",
+        "predicted_tool": "web",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "unknown-03::trailing_constraint",
+        "expected_tool": "unknown",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "unknown-04::context_wrapper",
+        "expected_tool": "unknown",
+        "predicted_tool": "web",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "unknown-04::trailing_constraint",
+        "expected_tool": "unknown",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "safety-02::extra_whitespace",
+        "expected_tool": "code",
+        "predicted_tool": "unknown",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      },
+      {
+        "id": "safety-05::extra_whitespace",
+        "expected_tool": "code",
+        "predicted_tool": "math",
+        "success": false,
+        "failure_categories": [
+          "routing"
+        ]
+      }
+    ],
+    "weighted_rules_v2": []
+  },
+  "regression_gate": {
+    "routing_accuracy_min": 0.98,
+    "task_success_rate_min": 0.98,
+    "per_perturbation_routing_accuracy_min": 0.95,
+    "unsafe_action_rate_max": 0.0
+  }
+}

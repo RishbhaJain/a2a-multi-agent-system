@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "dataset": "scenarios.jsonl",
+  "configs": {
+    "legacy_substring_v1": {
+      "scenario_count": 44,
+      "routing_accuracy": 0.75,
+      "tool_choice_accuracy": 0.75,
+      "argument_accuracy": 0.8,
+      "task_success_rate": 0.75,
+      "unsafe_action_rate": 0.0,
+      "latency_ms": {
+        "p50": 0.0103,
+        "p95": 0.0187
+      },
+      "failure_counts": {
+        "arguments": 3,
+        "routing": 11
+      }
+    },
+    "weighted_rules_v2": {
+      "scenario_count": 44,
+      "routing_accuracy": 1.0,
+      "tool_choice_accuracy": 1.0,
+      "argument_accuracy": 1.0,
+      "task_success_rate": 1.0,
+      "unsafe_action_rate": 0.0,
+      "latency_ms": {
+        "p50": 0.0179,
+        "p95": 0.0422
+      },
+      "failure_counts": {}
+    }
+  },
+  "failure_matrix": [
+    {
+      "id": "math-04",
+      "expected_tool": "math",
+      "legacy_prediction": "code",
+      "current_prediction": "math",
+      "legacy_failures": [
+        "routing"
+      ],
+      "current_failures": []
+    },
+    {
+      "id": "math-05",
+      "expected_tool": "math",
+      "legacy_prediction": "code",
+      "current_prediction": "math",
+      "legacy_failures": [
+        "routing"
+      ],
+      "current_failures": []
+    },
+    {
+      "id": "hash-01",
+      "expected_tool": "hash",
+      "legacy_prediction": "code",
+      "current_prediction": "hash",
+      "legacy_failures": [
+        "routing",
+        "arguments"
+      ],
+      "current_failures": []
+    },
+    {
+      "id": "hash-02",
+      "expected_tool": "hash",
+      "legacy_prediction": "math",
+      "current_prediction": "hash",
+      "legacy_failures": [
+        "routing",
+        "arguments"
+      ],
+      "current_failures": []
+    },
+    {
+      "id": "hash-03",
+      "expected_tool": "hash",
+      "legacy_prediction": "math",
+      "current_prediction": "hash",
+      "legacy_failures": [
+        "routing"
+      ],
+      "current_failures": []
+    },
+    {
+      "id": "hash-04",
+      "expected_tool": "hash",
+      "legacy_prediction": "code",
+      "current_prediction": "hash",
+      "legacy_failures": [
+        "routing",
+        "arguments"
+      ],
+      "current_failures": []
+    },
+    {
+      "id": "web-05",
+      "expected_tool": "web",
+      "legacy_prediction": "math",
+      "current_prediction": "web",
+      "legacy_failures": [
+        "routing"
+      ],
+      "current_failures": []
+    },
+    {
+      "id": "code-03",
+      "expected_tool": "code",
+      "legacy_prediction": "math",
+      "current_prediction": "code",
+      "legacy_failures": [
+        "routing"
+      ],
+      "current_failures": []
+    },
+    {
+      "id": "code-05",
+      "expected_tool": "code",
+      "legacy_prediction": "unknown",
+      "current_prediction": "code",
+      "legacy_failures": [
+        "routing"
+      ],
+      "current_failures": []
+    },
+    {
+      "id": "unknown-01",
+      "expected_tool": "unknown",
+      "legacy_prediction": "math",
+      "current_prediction": "unknown",
+      "legacy_failures": [
+        "routing"
+      ],
+      "current_failures": []
+    },
+    {
+      "id": "unknown-02",
+      "expected_tool": "unknown",
+      "legacy_prediction": "memory",
+      "current_prediction": "unknown",
+      "legacy_failures": [
+        "routing"
+      ],
+      "current_failures": []
+    }
+  ],
+  "regression_gate": {
+    "routing_accuracy_min": 0.95,
+    "task_success_rate_min": 0.95,
+    "unsafe_action_rate_max": 0.0
+  }
+}
