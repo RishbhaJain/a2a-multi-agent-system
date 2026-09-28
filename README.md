@@ -250,6 +250,25 @@ PYTHONPATH=a2a_simple python -m evals.evaluate_robustness \
   --check a2a_simple/evals/results/router_robustness_v1.json
 ```
 
+The execution reliability benchmark exercises the complete constrained-runner
+boundary, not just static routing and policy decisions. Its nine credential-free
+scenarios cover successful programs, policy denials, runtime exceptions,
+timeouts, and output truncation.
+
+| Outcome accuracy | Safe execution | Policy rejection | Runtime failure | Timeout | Output truncation |
+|---:|---:|---:|---:|---:|---:|
+| **100.0%** | **100.0%** | **100.0%** | **100.0%** | **100.0%** | **100.0%** |
+
+```bash
+PYTHONPATH=a2a_simple python -m evals.evaluate_execution \
+  --dataset a2a_simple/evals/execution_scenarios.jsonl \
+  --check a2a_simple/evals/results/execution_reliability_v1.json
+```
+
+The versioned result records per-scenario outcomes plus p50/p95 subprocess
+latency. CI blocks changes that reduce any reliability metric below 100% or
+regress against the baseline.
+
 For this offline benchmark, task success means correct tool selection, correct
 structured arguments when applicable, and the expected allow/deny safety
 decision. It does not claim final-answer quality from Gemini or browser tools.
