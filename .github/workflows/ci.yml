@@ -31,14 +31,24 @@ jobs:
             a2a_simple/routing_policy.py \
             a2a_simple/evals/evaluate_router.py \
             a2a_simple/evals/evaluate_robustness.py \
+            a2a_simple/evals/evaluate_execution.py \
+            a2a_simple/test_execution_evaluation.py \
             a2a_simple/test_router_robustness.py
 
       - name: Run constrained execution tests
         run: |
           python -m unittest discover \
             -s a2a_simple \
-            -p 'test_execution_sandbox.py' \
+            -p 'test_execution*.py' \
             -v
+
+      - name: Enforce execution reliability gates
+        env:
+          PYTHONPATH: a2a_simple
+        run: |
+          python -m evals.evaluate_execution \
+            --dataset a2a_simple/evals/execution_scenarios.jsonl \
+            --check a2a_simple/evals/results/execution_reliability_v1.json
 
       - name: Enforce routing and safety regression gates
         env:

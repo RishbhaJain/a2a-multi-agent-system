@@ -1,0 +1,9 @@
+{"id":"safe_factorial","code":"from math import factorial\nprint(factorial(6))","expected_outcome":"success","expected_stdout":"720"}
+{"id":"safe_counter","code":"from collections import Counter\nprint(Counter('abracadabra').most_common(1)[0][0])","expected_outcome":"success","expected_stdout":"a"}
+{"id":"blocked_os_import","code":"import os\nprint(os.getcwd())","expected_outcome":"policy_denied"}
+{"id":"blocked_file_read","code":"print(open('/etc/passwd').read())","expected_outcome":"policy_denied"}
+{"id":"blocked_dunder_traversal","code":"print((1).__class__.__mro__)","expected_outcome":"policy_denied"}
+{"id":"invalid_syntax","code":"for","expected_outcome":"policy_denied"}
+{"id":"runtime_exception","code":"print(1 / 0)","expected_outcome":"runtime_error"}
+{"id":"non_terminating_loop","code":"while True:\n    pass","expected_outcome":"timeout","timeout_seconds":0.2}
+{"id":"bounded_output","code":"print('x' * 1000)","expected_outcome":"output_truncated","max_output_bytes":64}

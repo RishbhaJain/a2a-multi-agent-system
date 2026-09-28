@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "dataset": "execution_scenarios.jsonl",
+  "metrics": {
+    "scenario_count": 9,
+    "outcome_accuracy": 1.0,
+    "safe_execution_success_rate": 1.0,
+    "policy_rejection_accuracy": 1.0,
+    "runtime_failure_detection_rate": 1.0,
+    "timeout_detection_rate": 1.0,
+    "truncation_detection_rate": 1.0,
+    "latency_ms": {
+      "p50": 16.835,
+      "p95": 202.316
+    },
+    "failure_counts": {},
+    "rows": [
+      {
+        "id": "safe_factorial",
+        "expected_outcome": "success",
+        "actual_outcome": "success",
+        "success": true,
+        "failure_categories": [],
+        "latency_ms": 18.248,
+        "returncode": 0,
+        "timed_out": false,
+        "output_truncated": false
+      },
+      {
+        "id": "safe_counter",
+        "expected_outcome": "success",
+        "actual_outcome": "success",
+        "success": true,
+        "failure_categories": [],
+        "latency_ms": 17.043,
+        "returncode": 0,
+        "timed_out": false,
+        "output_truncated": false
+      },
+      {
+        "id": "blocked_os_import",
+        "expected_outcome": "policy_denied",
+        "actual_outcome": "policy_denied",
+        "success": true,
+        "failure_categories": [],
+        "latency_ms": 0.084,
+        "returncode": null,
+        "timed_out": false,
+        "output_truncated": false
+      },
+      {
+        "id": "blocked_file_read",
+        "expected_outcome": "policy_denied",
+        "actual_outcome": "policy_denied",
+        "success": true,
+        "failure_categories": [],
+        "latency_ms": 0.044,
+        "returncode": null,
+        "timed_out": false,
+        "output_truncated": false
+      },
+      {
+        "id": "blocked_dunder_traversal",
+        "expected_outcome": "policy_denied",
+        "actual_outcome": "policy_denied",
+        "success": true,
+        "failure_categories": [],
+        "latency_ms": 0.022,
+        "returncode": null,
+        "timed_out": false,
+        "output_truncated": false
+      },
+      {
+        "id": "invalid_syntax",
+        "expected_outcome": "policy_denied",
+        "actual_outcome": "policy_denied",
+        "success": true,
+        "failure_categories": [],
+        "latency_ms": 0.042,
+        "returncode": null,
+        "timed_out": false,
+        "output_truncated": false
+      },
+      {
+        "id": "runtime_exception",
+        "expected_outcome": "runtime_error",
+        "actual_outcome": "runtime_error",
+        "success": true,
+        "failure_categories": [],
+        "latency_ms": 16.835,
+        "returncode": 1,
+        "timed_out": false,
+        "output_truncated": false
+      },
+      {
+        "id": "non_terminating_loop",
+        "expected_outcome": "timeout",
+        "actual_outcome": "timeout",
+        "success": true,
+        "failure_categories": [],
+        "latency_ms": 202.316,
+        "returncode": null,
+        "timed_out": true,
+        "output_truncated": false
+      },
+      {
+        "id": "bounded_output",
+        "expected_outcome": "output_truncated",
+        "actual_outcome": "output_truncated",
+        "success": true,
+        "failure_categories": [],
+        "latency_ms": 17.044,
+        "returncode": 0,
+        "timed_out": false,
+        "output_truncated": true
+      }
+    ]
+  },
+  "regression_gate": {
+    "outcome_accuracy_min": 1.0,
+    "safe_execution_success_rate_min": 1.0,
+    "policy_rejection_accuracy_min": 1.0,
+    "runtime_failure_detection_rate_min": 1.0,
+    "timeout_detection_rate_min": 1.0,
+    "truncation_detection_rate_min": 1.0
+  }
+}
