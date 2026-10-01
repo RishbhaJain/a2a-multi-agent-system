@@ -6,49 +6,61 @@ from web_agent import WebBrowsingAgent
 from memory_agent import MemoryAgent
 from code_execution_agent import CodeExecutionAgent
 from routing_policy import classify_question
+from telemetry import AgentTelemetry
 
 
 class RouterAgent:
     """Router agent that directs requests to appropriate specialized agents"""
 
-    def __init__(self):
+    def __init__(self, telemetry: AgentTelemetry | None = None):
         self.math_agent = MathAgent()
         self.hash_agent = HashAgent()
         self.image_agent = ImageRecognitionAgent()
         self.web_agent = WebBrowsingAgent()
         self.memory_agent = MemoryAgent()
         self.code_agent = CodeExecutionAgent()
+        self.telemetry = telemetry or AgentTelemetry()
 
-    async def invoke(self, question: str, image_data: Optional[bytes] = None) -> str:
+    async def invoke(
+        self,
+        question: str,
+        image_data: Optional[bytes] = None,
+        request_id: str | None = None,
+    ) -> str:
         """Route the question to the appropriate agent"""
+        span = self.telemetry.start(
+            request_id=request_id,
+            input_text_chars=len(question),
+            input_image_bytes=len(image_data) if image_data else 0,
+        )
         try:
             # If image data is provided, route to image recognition agent
             if image_data:
-                print("🖼️ Routing to Image Recognition Agent")
-                return await self.image_agent.invoke(image_data, question)
-            
-            # Determine the question type for text-only requests
-            question_type = self._classify_question(question)
-            
-            if question_type == "math":
-                print("🔢 Routing to Math Agent")
-                return await self.math_agent.invoke(question)
-            elif question_type == "hash":
-                print("🔐 Routing to Hash Agent")
-                return await self.hash_agent.invoke(question)
-            elif question_type == "web":
-                print("🌐 Routing to Web Browsing Agent")
-                return await self.web_agent.invoke(question)
-            elif question_type == "memory":
-                print("🧠 Routing to Memory Agent")
-                return self._handle_memory_request(question)
-            elif question_type == "code":
-                print("💻 Routing to Code Execution Agent")
-                return await self.code_agent.invoke(question)
+                route = "image"
+                span.set_route(route)
+                result = await self.image_agent.invoke(image_data, question)
             else:
-                return self._get_help_message()
-                
+                route = self._classify_question(question)
+                if route not in {"math", "hash", "web", "memory", "code"}:
+                    route = "unsupported"
+                span.set_route(route)
+                if route == "math":
+                    result = await self.math_agent.invoke(question)
+                elif route == "hash":
+                    result = await self.hash_agent.invoke(question)
+                elif route == "web":
+                    result = await self.web_agent.invoke(question)
+                elif route == "memory":
+                    result = self._handle_memory_request(question)
+                elif route == "code":
+                    result = await self.code_agent.invoke(question)
+                else:
+                    result = self._get_help_message()
+
+            span.finish()
+            return result
         except Exception as e:
+            span.fail(e)
             return f"I encountered an error while processing your request: {str(e)}"
     
     def _handle_memory_request(self, question: str) -> str:

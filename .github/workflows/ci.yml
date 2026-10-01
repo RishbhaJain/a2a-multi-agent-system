@@ -26,6 +26,9 @@ jobs:
       - name: Compile evaluation and execution modules
         run: |
           python -m py_compile \
+            a2a_simple/__main__.py \
+            a2a_simple/router_agent.py \
+            a2a_simple/telemetry.py \
             a2a_simple/execution_sandbox.py \
             a2a_simple/code_execution_agent.py \
             a2a_simple/routing_policy.py \
@@ -33,7 +36,13 @@ jobs:
             a2a_simple/evals/evaluate_robustness.py \
             a2a_simple/evals/evaluate_execution.py \
             a2a_simple/test_execution_evaluation.py \
+            a2a_simple/test_telemetry.py \
             a2a_simple/test_router_robustness.py
+
+      - name: Test content-safe agent telemetry
+        env:
+          PYTHONPATH: a2a_simple
+        run: python -m unittest a2a_simple.test_telemetry -v
 
       - name: Run constrained execution tests
         run: |
