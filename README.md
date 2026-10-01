@@ -276,7 +276,13 @@ decision. It does not claim final-answer quality from Gemini or browser tools.
 ## 🌐 API Endpoints
 
 - `GET /.well-known/agent-card.json`: Agent capabilities and metadata
+- `GET /metrics`: Process-local success, error, p50, and p95 metrics by route
 - `POST /`: Main A2A message endpoint
+
+Every invocation also emits a structured JSON trace with a request ID, selected
+route, outcome, latency, and input sizes. Prompt text, uploaded file contents,
+and exception messages are deliberately excluded so operational logs do not
+become a second store for sensitive user data.
 
 ## 🔒 Security
 
@@ -340,9 +346,10 @@ microVM with an unprivileged user and a read-only filesystem.
    - Verify memory file is not corrupted
    - Ensure proper JSON format in memory storage
 
-### Debug Mode
+### Operational debugging
 
-Enable debug logging by adding print statements in the agent files or using Python's logging module.
+Correlate JSON trace events by `request_id`, then inspect `/metrics` for route-level
+error rates and tail latency. The server never logs raw prompt or image contents.
 
 ## 📁 Project Structure
 
