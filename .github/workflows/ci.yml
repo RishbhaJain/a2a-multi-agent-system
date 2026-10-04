@@ -28,6 +28,7 @@ jobs:
           python -m py_compile \
             a2a_simple/__main__.py \
             a2a_simple/router_agent.py \
+            a2a_simple/agent_resilience.py \
             a2a_simple/telemetry.py \
             a2a_simple/execution_sandbox.py \
             a2a_simple/code_execution_agent.py \
@@ -36,8 +37,14 @@ jobs:
             a2a_simple/evals/evaluate_robustness.py \
             a2a_simple/evals/evaluate_execution.py \
             a2a_simple/test_execution_evaluation.py \
+            a2a_simple/test_agent_resilience.py \
             a2a_simple/test_telemetry.py \
             a2a_simple/test_router_robustness.py
+
+      - name: Test per-route timeout and circuit-breaker behavior
+        env:
+          PYTHONPATH: a2a_simple
+        run: python -m unittest a2a_simple.test_agent_resilience -v
 
       - name: Test content-safe agent telemetry
         env:

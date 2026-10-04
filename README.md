@@ -43,6 +43,7 @@ A sophisticated Agent-to-Agent (A2A) system that intelligently routes requests t
 ### 🧠 **Smart Router**
 - Automatically classifies incoming requests
 - Routes to appropriate specialized agents
+- Enforces a request deadline and per-route circuit breaker for external agents
 - Provides helpful guidance for unsupported requests
 
 ## 🚀 Quick Start
@@ -284,6 +285,13 @@ route, outcome, latency, and input sizes. Prompt text, uploaded file contents,
 and exception messages are deliberately excluded so operational logs do not
 become a second store for sensitive user data.
 
+External math, hash, image, web, and code routes have a 30-second deadline.
+Three consecutive failures open only that route's circuit for 30 seconds, which
+prevents a failing dependency from consuming capacity across the whole router.
+After cooldown, the next request acts as a recovery probe. Caller cancellation
+does not count as an upstream failure, and public errors do not expose provider
+details.
+
 ## 🔒 Security
 
 ### API Key Management
@@ -357,6 +365,7 @@ error rates and tail latency. The server never logs raw prompt or image contents
 a2a_simple/
 ├── __main__.py              # Main server and A2A setup
 ├── router_agent.py          # Smart request router
+├── agent_resilience.py      # Per-route deadlines and circuit breakers
 ├── agent_executor.py        # Math agent implementation
 ├── hash_agent.py           # Hash operations agent
 ├── image_agent.py          # Image recognition agent
