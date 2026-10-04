@@ -1,4 +1,7 @@
+from collections.abc import Awaitable, Callable
 from typing import Optional
+
+from agent_resilience import CircuitBreaker, invoke_with_resilience
 from agent_executor import MathAgent
 from hash_agent import HashAgent
 from image_agent import ImageRecognitionAgent
@@ -12,7 +15,15 @@ from telemetry import AgentTelemetry
 class RouterAgent:
     """Router agent that directs requests to appropriate specialized agents"""
 
-    def __init__(self, telemetry: AgentTelemetry | None = None):
+    def __init__(
+        self,
+        telemetry: AgentTelemetry | None = None,
+        *,
+        agent_timeout_seconds: float = 30.0,
+        circuit_breaker: CircuitBreaker | None = None,
+    ):
+        if agent_timeout_seconds <= 0:
+            raise ValueError("agent_timeout_seconds must be positive")
         self.math_agent = MathAgent()
         self.hash_agent = HashAgent()
         self.image_agent = ImageRecognitionAgent()
@@ -20,6 +31,8 @@ class RouterAgent:
         self.memory_agent = MemoryAgent()
         self.code_agent = CodeExecutionAgent()
         self.telemetry = telemetry or AgentTelemetry()
+        self.agent_timeout_seconds = agent_timeout_seconds
+        self.circuit_breaker = circuit_breaker or CircuitBreaker()
 
     async def invoke(
         self,
@@ -38,31 +51,56 @@ class RouterAgent:
             if image_data:
                 route = "image"
                 span.set_route(route)
-                result = await self.image_agent.invoke(image_data, question)
+                result = await self._invoke_agent(
+                    route, lambda: self.image_agent.invoke(image_data, question)
+                )
             else:
                 route = self._classify_question(question)
                 if route not in {"math", "hash", "web", "memory", "code"}:
                     route = "unsupported"
                 span.set_route(route)
                 if route == "math":
-                    result = await self.math_agent.invoke(question)
+                    result = await self._invoke_agent(
+                        route, lambda: self.math_agent.invoke(question)
+                    )
                 elif route == "hash":
-                    result = await self.hash_agent.invoke(question)
+                    result = await self._invoke_agent(
+                        route, lambda: self.hash_agent.invoke(question)
+                    )
                 elif route == "web":
-                    result = await self.web_agent.invoke(question)
+                    result = await self._invoke_agent(
+                        route, lambda: self.web_agent.invoke(question)
+                    )
                 elif route == "memory":
                     result = self._handle_memory_request(question)
                 elif route == "code":
-                    result = await self.code_agent.invoke(question)
+                    result = await self._invoke_agent(
+                        route, lambda: self.code_agent.invoke(question)
+                    )
                 else:
                     result = self._get_help_message()
 
             span.finish()
             return result
-        except Exception as e:
-            span.fail(e)
-            return f"I encountered an error while processing your request: {str(e)}"
-    
+        except Exception as error:
+            span.fail(error)
+            return (
+                "The selected agent is temporarily unavailable. "
+                "Please try the request again."
+            )
+
+    async def _invoke_agent(
+        self,
+        route: str,
+        operation: Callable[[], Awaitable[str]],
+    ) -> str:
+        return await invoke_with_resilience(
+            route,
+            operation,
+            timeout_seconds=self.agent_timeout_seconds,
+            circuit_breaker=self.circuit_breaker,
+        )
+
     def _handle_memory_request(self, question: str) -> str:
         """Handle memory-related requests"""
         try:
