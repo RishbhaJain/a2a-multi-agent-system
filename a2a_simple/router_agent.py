@@ -1,7 +1,7 @@
 from collections.abc import Awaitable, Callable
 from typing import Optional
 
-from agent_resilience import CircuitBreaker, invoke_with_resilience
+from agent_resilience import AgentBulkhead, CircuitBreaker, invoke_with_resilience
 from agent_executor import MathAgent
 from hash_agent import HashAgent
 from image_agent import ImageRecognitionAgent
@@ -21,6 +21,8 @@ class RouterAgent:
         *,
         agent_timeout_seconds: float = 30.0,
         circuit_breaker: CircuitBreaker | None = None,
+        bulkhead: AgentBulkhead | None = None,
+        max_in_flight_per_route: int = 8,
     ):
         if agent_timeout_seconds <= 0:
             raise ValueError("agent_timeout_seconds must be positive")
@@ -33,6 +35,9 @@ class RouterAgent:
         self.telemetry = telemetry or AgentTelemetry()
         self.agent_timeout_seconds = agent_timeout_seconds
         self.circuit_breaker = circuit_breaker or CircuitBreaker()
+        self.bulkhead = bulkhead or AgentBulkhead(
+            max_in_flight_per_route=max_in_flight_per_route
+        )
 
     async def invoke(
         self,
@@ -99,6 +104,7 @@ class RouterAgent:
             operation,
             timeout_seconds=self.agent_timeout_seconds,
             circuit_breaker=self.circuit_breaker,
+            bulkhead=self.bulkhead,
         )
 
     def _handle_memory_request(self, question: str) -> str:

@@ -5,7 +5,8 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 from typing import TypeVar
 
@@ -18,6 +19,10 @@ class AgentCallTimeout(TimeoutError):
 
 class AgentCircuitOpen(RuntimeError):
     """Raised when a route is temporarily blocked after repeated failures."""
+
+
+class AgentRouteSaturated(RuntimeError):
+    """Raised when a route has reached its configured concurrency limit."""
 
 
 @dataclass
@@ -81,29 +86,70 @@ class CircuitBreaker:
             }
 
 
+class AgentBulkhead:
+    """Limit concurrent work independently for each delegated agent route."""
+
+    def __init__(self, *, max_in_flight_per_route: int = 8) -> None:
+        if max_in_flight_per_route <= 0:
+            raise ValueError("max_in_flight_per_route must be positive")
+        self.max_in_flight_per_route = max_in_flight_per_route
+        self._in_flight: dict[str, int] = {}
+        self._lock = threading.Lock()
+
+    @contextmanager
+    def slot(self, route: str) -> Iterator[None]:
+        """Acquire one route-local slot or fail fast without queueing."""
+        with self._lock:
+            current = self._in_flight.get(route, 0)
+            if current >= self.max_in_flight_per_route:
+                raise AgentRouteSaturated(
+                    f"agent route {route!r} reached its concurrency limit"
+                )
+            self._in_flight[route] = current + 1
+        try:
+            yield
+        finally:
+            with self._lock:
+                self._in_flight[route] -= 1
+
+    def snapshot(self) -> dict[str, dict[str, int]]:
+        """Return content-free utilization suitable for diagnostics."""
+        with self._lock:
+            return {
+                route: {
+                    "in_flight": in_flight,
+                    "capacity": self.max_in_flight_per_route,
+                }
+                for route, in_flight in sorted(self._in_flight.items())
+            }
+
+
 async def invoke_with_resilience(
     route: str,
     operation: Callable[[], Awaitable[T]],
     *,
     timeout_seconds: float,
     circuit_breaker: CircuitBreaker,
+    bulkhead: AgentBulkhead | None = None,
 ) -> T:
-    """Invoke one agent with a deadline and per-route circuit breaker."""
+    """Invoke one agent with route-local capacity, deadline, and circuit state."""
     if timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be positive")
-    circuit_breaker.before_call(route)
-    try:
-        result = await asyncio.wait_for(operation(), timeout=timeout_seconds)
-    except asyncio.CancelledError:
-        raise
-    except TimeoutError as exc:
-        circuit_breaker.record_failure(route)
-        raise AgentCallTimeout(
-            f"agent route {route!r} exceeded {timeout_seconds:g} seconds"
-        ) from exc
-    except Exception:
-        circuit_breaker.record_failure(route)
-        raise
-    else:
-        circuit_breaker.record_success(route)
-        return result
+    slot = bulkhead.slot(route) if bulkhead is not None else nullcontext()
+    with slot:
+        circuit_breaker.before_call(route)
+        try:
+            result = await asyncio.wait_for(operation(), timeout=timeout_seconds)
+        except asyncio.CancelledError:
+            raise
+        except TimeoutError as exc:
+            circuit_breaker.record_failure(route)
+            raise AgentCallTimeout(
+                f"agent route {route!r} exceeded {timeout_seconds:g} seconds"
+            ) from exc
+        except Exception:
+            circuit_breaker.record_failure(route)
+            raise
+        else:
+            circuit_breaker.record_success(route)
+            return result

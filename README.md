@@ -44,6 +44,7 @@ A sophisticated Agent-to-Agent (A2A) system that intelligently routes requests t
 - Automatically classifies incoming requests
 - Routes to appropriate specialized agents
 - Enforces a request deadline and per-route circuit breaker for external agents
+- Applies an independent concurrency bulkhead to every external-agent route
 - Provides helpful guidance for unsupported requests
 
 ## 🚀 Quick Start
@@ -291,6 +292,12 @@ prevents a failing dependency from consuming capacity across the whole router.
 After cooldown, the next request acts as a recovery probe. Caller cancellation
 does not count as an upstream failure, and public errors do not expose provider
 details.
+
+Each external route also has an eight-request concurrency bulkhead. A saturated
+route fails fast instead of building an unbounded queue, while unrelated routes
+retain their own capacity. Slots are released after success, failure, timeout,
+or cancellation. Bulkhead saturation is a local backpressure signal and does not
+count as a provider failure or open the circuit breaker.
 
 ## 🔒 Security
 
