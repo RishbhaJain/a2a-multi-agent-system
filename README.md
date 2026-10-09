@@ -1,6 +1,42 @@
-# Multi-Agent Router System
+# Evaluated A2A Multi-Agent Router
 
-A sophisticated Agent-to-Agent (A2A) system that intelligently routes requests to specialized sub-agents for math problems, cryptographic hash operations, image recognition, web browsing, code execution, and memory management. Built using the A2A SDK and powered by Google's Gemini API.
+[![CI](https://github.com/RishbhaJain/a2a-multi-agent-system/actions/workflows/ci.yml/badge.svg)](https://github.com/RishbhaJain/a2a-multi-agent-system/actions/workflows/ci.yml)
+
+A production-style Agent-to-Agent router evaluated across tool selection,
+structured arguments, prompt perturbations, execution safety, and failure
+isolation. The system routes math, hashing, vision, browser, code-execution, and
+memory requests while enforcing per-route deadlines, circuit breakers, and
+concurrency bulkheads.
+
+## Measured results
+
+| Evaluation | Cases | Production task success | Legacy baseline | Unsafe-action rate |
+|---|---:|---:|---:|---:|
+| Golden routing and safety set | 44 | **100.0%** | 75.0% | **0.0%** |
+| Prompt-robustness suite | 176 | **100.0%** | 67.1% | **0.0%** |
+| Constrained execution suite | 9 | **100.0%** | n/a | **0.0%** |
+
+These are deterministic, credential-free policy and execution benchmarks, not
+claims about Gemini answer quality. Versioned result artifacts and CI regression
+gates make the measurements reproducible.
+
+## What I built
+
+- A deterministic weighted routing policy with structured argument extraction
+- Golden-set and perturbation evaluation harnesses with versioned failure matrices
+- A constrained Python runner with policy denials, resource limits, and safety tests
+- Production reliability controls and privacy-safe route-level telemetry
+
+## System at a glance
+
+```mermaid
+flowchart TD
+    A["A2A request"] --> B["Weighted router"]
+    B --> C["Per-route bulkhead"]
+    C --> D["Deadline + circuit breaker"]
+    D --> E["Specialized agent"]
+    E --> F["Metrics + safe trace"]
+```
 
 ## 🌟 Features
 
