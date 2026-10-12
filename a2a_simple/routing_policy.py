@@ -11,9 +11,14 @@ class RoutingDecision:
     tool: str
     scores: dict[str, int]
     matched_rules: dict[str, list[str]]
+    score_margin: int | None
+    abstention_reason: str | None
 
 
 ROUTE_PRIORITY = ("memory", "code", "web", "hash", "math")
+MIN_CONFIDENT_SCORE = 3
+MIN_CONFIDENT_MARGIN = 3
+MIN_AMBIGUOUS_RUNNER_UP_SCORE = 5
 RULES: dict[str, tuple[tuple[str, int], ...]] = {
     "memory": (
         (r"\b(remember|store|save)\b", 5),
@@ -55,14 +60,37 @@ def classify_question(question: str) -> RoutingDecision:
                 scores[route] += weight
                 matches[route].append(pattern)
 
-    winning_score = max(scores.values(), default=0)
-    if winning_score == 0:
-        return RoutingDecision("unknown", scores, matches)
-
-    winner = next(
-        route for route in ROUTE_PRIORITY if scores[route] == winning_score
+    ranked_routes = sorted(
+        ROUTE_PRIORITY,
+        key=lambda route: (-scores[route], ROUTE_PRIORITY.index(route)),
     )
-    return RoutingDecision(winner, scores, matches)
+    winner, runner_up = ranked_routes[:2]
+    winning_score = scores[winner]
+    runner_up_score = scores[runner_up]
+    score_margin = winning_score - runner_up_score
+
+    if winning_score < MIN_CONFIDENT_SCORE:
+        return RoutingDecision(
+            "unknown",
+            scores,
+            matches,
+            score_margin,
+            "insufficient_evidence",
+        )
+
+    if (
+        runner_up_score >= MIN_AMBIGUOUS_RUNNER_UP_SCORE
+        and score_margin < MIN_CONFIDENT_MARGIN
+    ):
+        return RoutingDecision(
+            "unknown",
+            scores,
+            matches,
+            score_margin,
+            "ambiguous_routes",
+        )
+
+    return RoutingDecision(winner, scores, matches, score_margin, None)
 
 
 def legacy_classify_question(question: str) -> str:

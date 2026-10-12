@@ -5,8 +5,8 @@
 A production-style Agent-to-Agent router evaluated across tool selection,
 structured arguments, prompt perturbations, execution safety, and failure
 isolation. The system routes math, hashing, vision, browser, code-execution, and
-memory requests while enforcing per-route deadlines, circuit breakers, and
-concurrency bulkheads.
+memory requests while abstaining from ambiguous requests and enforcing per-route
+deadlines, circuit breakers, and concurrency bulkheads.
 
 ## Measured results
 
@@ -16,6 +16,11 @@ concurrency bulkheads.
 | Prompt-robustness suite | 176 | **100.0%** | 67.1% | **0.0%** |
 | Constrained execution suite | 9 | **100.0%** | n/a | **0.0%** |
 
+The separate 18-case selective-routing suite achieves **100% in-domain
+coverage**, **100% abstention recall**, and a **0% false-route rate** across
+single-intent, out-of-domain, and conflicting multi-intent requests. These
+deterministic cases measure routing policy behavior, not model answer quality.
+
 These are deterministic, credential-free policy and execution benchmarks, not
 claims about Gemini answer quality. Versioned result artifacts and CI regression
 gates make the measurements reproducible.
@@ -23,6 +28,7 @@ gates make the measurements reproducible.
 ## What I built
 
 - A deterministic weighted routing policy with structured argument extraction
+- Margin-based abstention when two strongly supported routes conflict
 - Golden-set and perturbation evaluation harnesses with versioned failure matrices
 - A constrained Python runner with policy denials, resource limits, and safety tests
 - Production reliability controls and privacy-safe route-level telemetry
@@ -79,6 +85,7 @@ flowchart TD
 ### 🧠 **Smart Router**
 - Automatically classifies incoming requests
 - Routes to appropriate specialized agents
+- Abstains when multiple strongly supported routes are too close to call
 - Enforces a request deadline and per-route circuit breaker for external agents
 - Applies an independent concurrency bulkhead to every external-agent route
 - Provides helpful guidance for unsupported requests
@@ -286,6 +293,21 @@ PYTHONPATH=a2a_simple python -m evals.evaluate_router \
 PYTHONPATH=a2a_simple python -m evals.evaluate_robustness \
   --dataset a2a_simple/evals/scenarios.jsonl \
   --check a2a_simple/evals/results/router_robustness_v1.json
+```
+
+The selective-routing suite prevents misleading success rates caused by forcing
+every request into a tool. It reports in-domain coverage and accuracy alongside
+abstention recall and the false-route rate for out-of-domain and ambiguous
+requests.
+
+| Scenarios | In-domain coverage | In-domain accuracy | Abstention recall | False-route rate |
+|---:|---:|---:|---:|---:|
+| 18 | **100.0%** | **100.0%** | **100.0%** | **0.0%** |
+
+```bash
+PYTHONPATH=a2a_simple python -m evals.evaluate_selective_routing \
+  --dataset a2a_simple/evals/selective_routing_scenarios.jsonl \
+  --check a2a_simple/evals/results/selective_routing_v1.json
 ```
 
 The execution reliability benchmark exercises the complete constrained-runner

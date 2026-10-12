@@ -1,0 +1,18 @@
+{"id":"in-domain-math-01","kind":"in_domain","prompt":"Solve the integral of x squared.","expected_tool":"math"}
+{"id":"in-domain-math-02","kind":"in_domain","prompt":"Calculate 23 * 19.","expected_tool":"math"}
+{"id":"in-domain-hash-01","kind":"in_domain","prompt":"Create a SHA256 checksum for release.tar.gz.","expected_tool":"hash"}
+{"id":"in-domain-hash-02","kind":"in_domain","prompt":"Produce a cryptographic digest for this payload.","expected_tool":"hash"}
+{"id":"in-domain-web-01","kind":"in_domain","prompt":"Browse the website and return its title.","expected_tool":"web"}
+{"id":"in-domain-web-02","kind":"in_domain","prompt":"Search the web for the A2A protocol specification.","expected_tool":"web"}
+{"id":"in-domain-memory-01","kind":"in_domain","prompt":"Remember 14 and 92.","expected_tool":"memory"}
+{"id":"in-domain-memory-02","kind":"in_domain","prompt":"Retrieve the value stored with 14.","expected_tool":"memory"}
+{"id":"in-domain-code-01","kind":"in_domain","prompt":"Implement an algorithm for merge sort.","expected_tool":"code"}
+{"id":"in-domain-code-02","kind":"in_domain","prompt":"Generate Python code for matrix multiplication.","expected_tool":"code"}
+{"id":"out-of-domain-01","kind":"out_of_domain","prompt":"Recommend a science fiction book.","expected_tool":"unknown"}
+{"id":"out-of-domain-02","kind":"out_of_domain","prompt":"Tell me a joke about penguins.","expected_tool":"unknown"}
+{"id":"out-of-domain-03","kind":"out_of_domain","prompt":"What is the weather like today?","expected_tool":"unknown"}
+{"id":"out-of-domain-04","kind":"out_of_domain","prompt":"Draft a polite thank-you note.","expected_tool":"unknown"}
+{"id":"ambiguous-01","kind":"ambiguous","prompt":"Calculate an integral and search the web for the answer.","expected_tool":"unknown"}
+{"id":"ambiguous-02","kind":"ambiguous","prompt":"Remember this request and browse the website.","expected_tool":"unknown"}
+{"id":"ambiguous-03","kind":"ambiguous","prompt":"Store these values and solve the equation.","expected_tool":"unknown"}
+{"id":"ambiguous-04","kind":"ambiguous","prompt":"Implement an algorithm and search the web for examples.","expected_tool":"unknown"}
