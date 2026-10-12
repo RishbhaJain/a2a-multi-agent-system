@@ -1,0 +1,325 @@
+{
+  "schema_version": 1,
+  "dataset": "selective_routing_scenarios.jsonl",
+  "policy": "margin_abstention_v1",
+  "metrics": {
+    "scenario_count": 18,
+    "routing_accuracy": 1.0,
+    "in_domain_coverage": 1.0,
+    "in_domain_accuracy": 1.0,
+    "abstention_recall": 1.0,
+    "false_route_rate": 0.0,
+    "by_kind": {
+      "ambiguous": {
+        "count": 4,
+        "accuracy": 1.0
+      },
+      "in_domain": {
+        "count": 10,
+        "accuracy": 1.0
+      },
+      "out_of_domain": {
+        "count": 4,
+        "accuracy": 1.0
+      }
+    }
+  },
+  "failures": [],
+  "decisions": [
+    {
+      "id": "in-domain-math-01",
+      "kind": "in_domain",
+      "expected_tool": "math",
+      "predicted_tool": "math",
+      "score_margin": 5,
+      "abstention_reason": null,
+      "scores": {
+        "memory": 0,
+        "code": 0,
+        "web": 0,
+        "hash": 0,
+        "math": 5
+      },
+      "correct": true
+    },
+    {
+      "id": "in-domain-math-02",
+      "kind": "in_domain",
+      "expected_tool": "math",
+      "predicted_tool": "math",
+      "score_margin": 11,
+      "abstention_reason": null,
+      "scores": {
+        "memory": 0,
+        "code": 0,
+        "web": 0,
+        "hash": 0,
+        "math": 11
+      },
+      "correct": true
+    },
+    {
+      "id": "in-domain-hash-01",
+      "kind": "in_domain",
+      "expected_tool": "hash",
+      "predicted_tool": "hash",
+      "score_margin": 8,
+      "abstention_reason": null,
+      "scores": {
+        "memory": 0,
+        "code": 0,
+        "web": 0,
+        "hash": 8,
+        "math": 0
+      },
+      "correct": true
+    },
+    {
+      "id": "in-domain-hash-02",
+      "kind": "in_domain",
+      "expected_tool": "hash",
+      "predicted_tool": "hash",
+      "score_margin": 13,
+      "abstention_reason": null,
+      "scores": {
+        "memory": 0,
+        "code": 0,
+        "web": 0,
+        "hash": 13,
+        "math": 0
+      },
+      "correct": true
+    },
+    {
+      "id": "in-domain-web-01",
+      "kind": "in_domain",
+      "expected_tool": "web",
+      "predicted_tool": "web",
+      "score_margin": 6,
+      "abstention_reason": null,
+      "scores": {
+        "memory": 0,
+        "code": 0,
+        "web": 6,
+        "hash": 0,
+        "math": 0
+      },
+      "correct": true
+    },
+    {
+      "id": "in-domain-web-02",
+      "kind": "in_domain",
+      "expected_tool": "web",
+      "predicted_tool": "web",
+      "score_margin": 6,
+      "abstention_reason": null,
+      "scores": {
+        "memory": 0,
+        "code": 0,
+        "web": 6,
+        "hash": 0,
+        "math": 0
+      },
+      "correct": true
+    },
+    {
+      "id": "in-domain-memory-01",
+      "kind": "in_domain",
+      "expected_tool": "memory",
+      "predicted_tool": "memory",
+      "score_margin": 5,
+      "abstention_reason": null,
+      "scores": {
+        "memory": 5,
+        "code": 0,
+        "web": 0,
+        "hash": 0,
+        "math": 0
+      },
+      "correct": true
+    },
+    {
+      "id": "in-domain-memory-02",
+      "kind": "in_domain",
+      "expected_tool": "memory",
+      "predicted_tool": "memory",
+      "score_margin": 5,
+      "abstention_reason": null,
+      "scores": {
+        "memory": 5,
+        "code": 0,
+        "web": 0,
+        "hash": 0,
+        "math": 0
+      },
+      "correct": true
+    },
+    {
+      "id": "in-domain-code-01",
+      "kind": "in_domain",
+      "expected_tool": "code",
+      "predicted_tool": "code",
+      "score_margin": 6,
+      "abstention_reason": null,
+      "scores": {
+        "memory": 0,
+        "code": 6,
+        "web": 0,
+        "hash": 0,
+        "math": 0
+      },
+      "correct": true
+    },
+    {
+      "id": "in-domain-code-02",
+      "kind": "in_domain",
+      "expected_tool": "code",
+      "predicted_tool": "code",
+      "score_margin": 17,
+      "abstention_reason": null,
+      "scores": {
+        "memory": 0,
+        "code": 17,
+        "web": 0,
+        "hash": 0,
+        "math": 0
+      },
+      "correct": true
+    },
+    {
+      "id": "out-of-domain-01",
+      "kind": "out_of_domain",
+      "expected_tool": "unknown",
+      "predicted_tool": "unknown",
+      "score_margin": 0,
+      "abstention_reason": "insufficient_evidence",
+      "scores": {
+        "memory": 0,
+        "code": 0,
+        "web": 0,
+        "hash": 0,
+        "math": 0
+      },
+      "correct": true
+    },
+    {
+      "id": "out-of-domain-02",
+      "kind": "out_of_domain",
+      "expected_tool": "unknown",
+      "predicted_tool": "unknown",
+      "score_margin": 0,
+      "abstention_reason": "insufficient_evidence",
+      "scores": {
+        "memory": 0,
+        "code": 0,
+        "web": 0,
+        "hash": 0,
+        "math": 0
+      },
+      "correct": true
+    },
+    {
+      "id": "out-of-domain-03",
+      "kind": "out_of_domain",
+      "expected_tool": "unknown",
+      "predicted_tool": "unknown",
+      "score_margin": 0,
+      "abstention_reason": "insufficient_evidence",
+      "scores": {
+        "memory": 0,
+        "code": 0,
+        "web": 0,
+        "hash": 0,
+        "math": 0
+      },
+      "correct": true
+    },
+    {
+      "id": "out-of-domain-04",
+      "kind": "out_of_domain",
+      "expected_tool": "unknown",
+      "predicted_tool": "unknown",
+      "score_margin": 0,
+      "abstention_reason": "insufficient_evidence",
+      "scores": {
+        "memory": 0,
+        "code": 0,
+        "web": 0,
+        "hash": 0,
+        "math": 0
+      },
+      "correct": true
+    },
+    {
+      "id": "ambiguous-01",
+      "kind": "ambiguous",
+      "expected_tool": "unknown",
+      "predicted_tool": "unknown",
+      "score_margin": 1,
+      "abstention_reason": "ambiguous_routes",
+      "scores": {
+        "memory": 0,
+        "code": 0,
+        "web": 6,
+        "hash": 0,
+        "math": 5
+      },
+      "correct": true
+    },
+    {
+      "id": "ambiguous-02",
+      "kind": "ambiguous",
+      "expected_tool": "unknown",
+      "predicted_tool": "unknown",
+      "score_margin": 1,
+      "abstention_reason": "ambiguous_routes",
+      "scores": {
+        "memory": 5,
+        "code": 0,
+        "web": 6,
+        "hash": 0,
+        "math": 0
+      },
+      "correct": true
+    },
+    {
+      "id": "ambiguous-03",
+      "kind": "ambiguous",
+      "expected_tool": "unknown",
+      "predicted_tool": "unknown",
+      "score_margin": 0,
+      "abstention_reason": "ambiguous_routes",
+      "scores": {
+        "memory": 5,
+        "code": 0,
+        "web": 0,
+        "hash": 0,
+        "math": 5
+      },
+      "correct": true
+    },
+    {
+      "id": "ambiguous-04",
+      "kind": "ambiguous",
+      "expected_tool": "unknown",
+      "predicted_tool": "unknown",
+      "score_margin": 0,
+      "abstention_reason": "ambiguous_routes",
+      "scores": {
+        "memory": 0,
+        "code": 6,
+        "web": 6,
+        "hash": 0,
+        "math": 0
+      },
+      "correct": true
+    }
+  ],
+  "regression_gate": {
+    "in_domain_coverage_min": 1.0,
+    "in_domain_accuracy_min": 1.0,
+    "abstention_recall_min": 1.0,
+    "false_route_rate_max": 0.0
+  }
+}
+

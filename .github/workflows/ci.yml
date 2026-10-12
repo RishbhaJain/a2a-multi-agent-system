@@ -34,11 +34,13 @@ jobs:
             a2a_simple/code_execution_agent.py \
             a2a_simple/routing_policy.py \
             a2a_simple/evals/evaluate_router.py \
+            a2a_simple/evals/evaluate_selective_routing.py \
             a2a_simple/evals/evaluate_robustness.py \
             a2a_simple/evals/evaluate_execution.py \
             a2a_simple/test_execution_evaluation.py \
             a2a_simple/test_agent_resilience.py \
             a2a_simple/test_telemetry.py \
+            a2a_simple/test_selective_routing.py \
             a2a_simple/test_router_robustness.py
 
       - name: Test per-route timeout and circuit-breaker behavior
@@ -82,3 +84,12 @@ jobs:
           python -m evals.evaluate_robustness \
             --dataset a2a_simple/evals/scenarios.jsonl \
             --check a2a_simple/evals/results/router_robustness_v1.json
+
+      - name: Enforce selective-routing abstention gates
+        env:
+          PYTHONPATH: a2a_simple
+        run: |
+          python -m unittest a2a_simple.test_selective_routing -v
+          python -m evals.evaluate_selective_routing \
+            --dataset a2a_simple/evals/selective_routing_scenarios.jsonl \
+            --check a2a_simple/evals/results/selective_routing_v1.json
