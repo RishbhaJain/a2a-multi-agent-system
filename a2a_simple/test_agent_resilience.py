@@ -40,7 +40,7 @@ class AgentResilienceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, "answer")
         self.assertEqual(
             breaker.snapshot()["math"],
-            {"consecutive_failures": 0, "open": False},
+            {"consecutive_failures": 0, "open": False, "state": "closed"},
         )
 
     async def test_timeout_is_typed_and_counted(self) -> None:
@@ -123,6 +123,200 @@ class AgentResilienceTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertTrue(breaker.snapshot()["web"]["open"])
         self.assertFalse(breaker.snapshot()["math"]["open"])
+
+    async def test_half_open_circuit_allows_only_one_recovery_probe(self) -> None:
+        clock = FakeClock()
+        breaker = CircuitBreaker(
+            failure_threshold=1,
+            recovery_timeout_seconds=10,
+            clock=clock,
+        )
+
+        async def fail() -> None:
+            raise RuntimeError("provider unavailable")
+
+        with self.assertRaises(RuntimeError):
+            await invoke_with_resilience(
+                "web", fail, timeout_seconds=1, circuit_breaker=breaker
+            )
+
+        clock.now = 11
+        entered = asyncio.Event()
+        release = asyncio.Event()
+        probe_calls = 0
+
+        async def recovery_probe() -> str:
+            nonlocal probe_calls
+            probe_calls += 1
+            entered.set()
+            await release.wait()
+            return "recovered"
+
+        first = asyncio.create_task(
+            invoke_with_resilience(
+                "web",
+                recovery_probe,
+                timeout_seconds=1,
+                circuit_breaker=breaker,
+            )
+        )
+        await entered.wait()
+        self.assertEqual(breaker.snapshot()["web"]["state"], "half_open")
+
+        with self.assertRaises(AgentCircuitOpen):
+            await invoke_with_resilience(
+                "web",
+                recovery_probe,
+                timeout_seconds=1,
+                circuit_breaker=breaker,
+            )
+        self.assertEqual(probe_calls, 1)
+
+        release.set()
+        self.assertEqual(await first, "recovered")
+        self.assertEqual(breaker.snapshot()["web"]["state"], "closed")
+
+    async def test_failed_recovery_probe_restarts_cooldown(self) -> None:
+        clock = FakeClock()
+        breaker = CircuitBreaker(
+            failure_threshold=1,
+            recovery_timeout_seconds=10,
+            clock=clock,
+        )
+        calls = 0
+
+        async def fail() -> None:
+            nonlocal calls
+            calls += 1
+            raise RuntimeError("provider unavailable")
+
+        with self.assertRaises(RuntimeError):
+            await invoke_with_resilience(
+                "image", fail, timeout_seconds=1, circuit_breaker=breaker
+            )
+
+        clock.now = 11
+        with self.assertRaises(RuntimeError):
+            await invoke_with_resilience(
+                "image", fail, timeout_seconds=1, circuit_breaker=breaker
+            )
+
+        clock.now = 15
+        with self.assertRaises(AgentCircuitOpen):
+            await invoke_with_resilience(
+                "image", fail, timeout_seconds=1, circuit_breaker=breaker
+            )
+        self.assertEqual(calls, 2)
+
+        clock.now = 22
+
+        async def recover() -> str:
+            return "recovered"
+
+        self.assertEqual(
+            await invoke_with_resilience(
+                "image", recover, timeout_seconds=1, circuit_breaker=breaker
+            ),
+            "recovered",
+        )
+
+    async def test_cancelled_recovery_probe_releases_probe_permit(self) -> None:
+        clock = FakeClock()
+        breaker = CircuitBreaker(
+            failure_threshold=1,
+            recovery_timeout_seconds=10,
+            clock=clock,
+        )
+
+        async def fail() -> None:
+            raise RuntimeError("provider unavailable")
+
+        with self.assertRaises(RuntimeError):
+            await invoke_with_resilience(
+                "code", fail, timeout_seconds=1, circuit_breaker=breaker
+            )
+
+        clock.now = 11
+        entered = asyncio.Event()
+
+        async def blocked() -> None:
+            entered.set()
+            await asyncio.Event().wait()
+
+        probe = asyncio.create_task(
+            invoke_with_resilience(
+                "code", blocked, timeout_seconds=10, circuit_breaker=breaker
+            )
+        )
+        await entered.wait()
+        probe.cancel()
+        with self.assertRaises(asyncio.CancelledError):
+            await probe
+
+        async def recover() -> str:
+            return "recovered"
+
+        self.assertEqual(
+            await invoke_with_resilience(
+                "code", recover, timeout_seconds=1, circuit_breaker=breaker
+            ),
+            "recovered",
+        )
+
+    async def test_unrelated_cancellation_does_not_release_active_probe(self) -> None:
+        clock = FakeClock()
+        breaker = CircuitBreaker(
+            failure_threshold=1,
+            recovery_timeout_seconds=10,
+            clock=clock,
+        )
+        ordinary_entered = asyncio.Event()
+
+        async def ordinary_call() -> None:
+            ordinary_entered.set()
+            await asyncio.Event().wait()
+
+        ordinary = asyncio.create_task(
+            invoke_with_resilience(
+                "web", ordinary_call, timeout_seconds=20, circuit_breaker=breaker
+            )
+        )
+        await ordinary_entered.wait()
+
+        async def fail() -> None:
+            raise RuntimeError("provider unavailable")
+
+        with self.assertRaises(RuntimeError):
+            await invoke_with_resilience(
+                "web", fail, timeout_seconds=1, circuit_breaker=breaker
+            )
+
+        clock.now = 11
+        probe_entered = asyncio.Event()
+        release_probe = asyncio.Event()
+
+        async def recovery_probe() -> str:
+            probe_entered.set()
+            await release_probe.wait()
+            return "recovered"
+
+        probe = asyncio.create_task(
+            invoke_with_resilience(
+                "web", recovery_probe, timeout_seconds=1, circuit_breaker=breaker
+            )
+        )
+        await probe_entered.wait()
+
+        ordinary.cancel()
+        with self.assertRaises(asyncio.CancelledError):
+            await ordinary
+        with self.assertRaises(AgentCircuitOpen):
+            await invoke_with_resilience(
+                "web", recovery_probe, timeout_seconds=1, circuit_breaker=breaker
+            )
+
+        release_probe.set()
+        self.assertEqual(await probe, "recovered")
 
     async def test_cancellation_does_not_count_as_provider_failure(self) -> None:
         breaker = CircuitBreaker(failure_threshold=1)
