@@ -29,6 +29,7 @@ class AgentRouteSaturated(RuntimeError):
 class _CircuitState:
     consecutive_failures: int = 0
     opened_at: float | None = None
+    recovery_probe_in_flight: bool = False
 
 
 class CircuitBreaker:
@@ -51,17 +52,20 @@ class CircuitBreaker:
         self._states: dict[str, _CircuitState] = {}
         self._lock = threading.Lock()
 
-    def before_call(self, route: str) -> None:
-        """Allow a call, a recovery probe, or fail fast for an open route."""
+    def before_call(self, route: str) -> bool:
+        """Allow a call and report whether it owns the recovery-probe permit."""
         with self._lock:
             state = self._states.setdefault(route, _CircuitState())
             if state.opened_at is None:
-                return
-            if self._clock() - state.opened_at >= self.recovery_timeout_seconds:
-                state.consecutive_failures = 0
-                state.opened_at = None
-                return
-            raise AgentCircuitOpen(f"agent circuit is open for route {route!r}")
+                return False
+            if self._clock() - state.opened_at < self.recovery_timeout_seconds:
+                raise AgentCircuitOpen(f"agent circuit is open for route {route!r}")
+            if not state.recovery_probe_in_flight:
+                state.recovery_probe_in_flight = True
+                return True
+            raise AgentCircuitOpen(
+                f"agent recovery probe is already in flight for route {route!r}"
+            )
 
     def record_success(self, route: str) -> None:
         with self._lock:
@@ -71,16 +75,35 @@ class CircuitBreaker:
         with self._lock:
             state = self._states.setdefault(route, _CircuitState())
             state.consecutive_failures += 1
-            if state.consecutive_failures >= self.failure_threshold:
+            if (
+                state.recovery_probe_in_flight
+                or state.consecutive_failures >= self.failure_threshold
+            ):
                 state.opened_at = self._clock()
+                state.recovery_probe_in_flight = False
 
-    def snapshot(self) -> dict[str, dict[str, int | bool]]:
+    def record_cancellation(self, route: str, *, was_recovery_probe: bool) -> None:
+        """Release a half-open probe without treating cancellation as a failure."""
+        if not was_recovery_probe:
+            return
+        with self._lock:
+            state = self._states.setdefault(route, _CircuitState())
+            state.recovery_probe_in_flight = False
+
+    def snapshot(self) -> dict[str, dict[str, int | bool | str]]:
         """Return content-free state suitable for metrics and diagnostics."""
         with self._lock:
             return {
                 route: {
                     "consecutive_failures": state.consecutive_failures,
                     "open": state.opened_at is not None,
+                    "state": (
+                        "half_open"
+                        if state.recovery_probe_in_flight
+                        else "open"
+                        if state.opened_at is not None
+                        else "closed"
+                    ),
                 }
                 for route, state in sorted(self._states.items())
             }
@@ -137,10 +160,14 @@ async def invoke_with_resilience(
         raise ValueError("timeout_seconds must be positive")
     slot = bulkhead.slot(route) if bulkhead is not None else nullcontext()
     with slot:
-        circuit_breaker.before_call(route)
+        recovery_probe = circuit_breaker.before_call(route)
         try:
             result = await asyncio.wait_for(operation(), timeout=timeout_seconds)
         except asyncio.CancelledError:
+            circuit_breaker.record_cancellation(
+                route,
+                was_recovery_probe=recovery_probe,
+            )
             raise
         except TimeoutError as exc:
             circuit_breaker.record_failure(route)

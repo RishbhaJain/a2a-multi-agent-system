@@ -31,7 +31,7 @@ gates make the measurements reproducible.
 - Margin-based abstention when two strongly supported routes conflict
 - Golden-set and perturbation evaluation harnesses with versioned failure matrices
 - A constrained Python runner with policy denials, resource limits, and safety tests
-- Production reliability controls and privacy-safe route-level telemetry
+- Production reliability controls, single-probe circuit recovery, and privacy-safe route-level telemetry
 
 ## System at a glance
 
@@ -347,9 +347,11 @@ become a second store for sensitive user data.
 External math, hash, image, web, and code routes have a 30-second deadline.
 Three consecutive failures open only that route's circuit for 30 seconds, which
 prevents a failing dependency from consuming capacity across the whole router.
-After cooldown, the next request acts as a recovery probe. Caller cancellation
-does not count as an upstream failure, and public errors do not expose provider
-details.
+After cooldown, the circuit becomes half-open and admits exactly one recovery
+probe. Other requests continue to fail fast until that probe succeeds; a failed
+probe restarts the cooldown instead of causing a recovery stampede. Caller
+cancellation releases the probe permit without counting as an upstream failure,
+and public errors do not expose provider details.
 
 Each external route also has an eight-request concurrency bulkhead. A saturated
 route fails fast instead of building an unbounded queue, while unrelated routes
