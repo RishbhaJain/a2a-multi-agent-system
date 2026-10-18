@@ -11,8 +11,7 @@ class CodeGenerationAgent:
     def __init__(self):
         api_key = os.getenv('GEMINI_API_KEY')
         if not api_key:
-            os.environ['GEMINI_API_KEY'] = "AIzaSyA6YXQspNWcJ9ra8GhG6KfzizGbIRJ6aKc"  # Temporary for testing
-            api_key = os.getenv('GEMINI_API_KEY')
+            raise ValueError("Please set GEMINI_API_KEY environment variable")
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel('gemini-1.5-flash')
     
