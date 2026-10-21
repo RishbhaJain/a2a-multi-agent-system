@@ -97,6 +97,37 @@ class AgentTelemetryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "non-negative"):
             telemetry.start(input_text_chars=-1)
 
+    def test_bounds_retained_events_without_losing_lifetime_counters(self) -> None:
+        logger, _ = capturing_logger()
+        telemetry = AgentTelemetry(
+            logger=logger,
+            clock=FakeClock(0.0, 0.01, 1.0, 1.02, 2.0, 2.03),
+            max_events=2,
+        )
+
+        first = telemetry.start()
+        first.set_route("math")
+        first.finish()
+        second = telemetry.start()
+        second.set_route("web")
+        second.fail(TimeoutError())
+        third = telemetry.start()
+        third.set_route("hash")
+        third.finish()
+
+        snapshot = telemetry.snapshot()
+        self.assertEqual(snapshot["invocations_total"], 3)
+        self.assertEqual(snapshot["errors_total"], 1)
+        self.assertEqual(snapshot["success_rate"], 0.6667)
+        self.assertEqual(snapshot["events_retained"], 2)
+        self.assertEqual(snapshot["events_dropped_total"], 1)
+        self.assertNotIn("math", snapshot["routes"])
+        self.assertEqual(snapshot["routes"]["web"]["errors"], 1)
+
+    def test_rejects_non_positive_event_limit(self) -> None:
+        with self.assertRaisesRegex(ValueError, "max_events must be positive"):
+            AgentTelemetry(max_events=0)
+
 
 if __name__ == "__main__":
     unittest.main()
