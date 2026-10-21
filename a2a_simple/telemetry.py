@@ -13,7 +13,7 @@ import math
 import threading
 import time
 import uuid
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Callable
@@ -97,11 +97,16 @@ class AgentTelemetry:
         *,
         logger: logging.Logger | None = None,
         clock: Callable[[], float] = time.perf_counter,
+        max_events: int = 10_000,
     ) -> None:
+        if max_events <= 0:
+            raise ValueError("max_events must be positive")
         self.clock = clock
         self.logger = logger or self._default_logger()
         self._lock = threading.Lock()
-        self._events: list[InvocationEvent] = []
+        self._events: deque[InvocationEvent] = deque(maxlen=max_events)
+        self._invocations_total = 0
+        self._errors_total = 0
 
     @staticmethod
     def _default_logger() -> logging.Logger:
@@ -131,28 +136,34 @@ class AgentTelemetry:
     def record(self, event: InvocationEvent) -> None:
         with self._lock:
             self._events.append(event)
+            self._invocations_total += 1
+            if event.outcome != "success":
+                self._errors_total += 1
         self.logger.info(
             "%s", json.dumps(asdict(event), sort_keys=True, separators=(",", ":"))
         )
 
     def snapshot(self) -> dict[str, object]:
-        """Return aggregate reliability and latency metrics by route."""
+        """Return lifetime totals and latency metrics for the retained window."""
         with self._lock:
             events = tuple(self._events)
+            invocations_total = self._invocations_total
+            errors_total = self._errors_total
 
         grouped: dict[str, list[InvocationEvent]] = defaultdict(list)
         for event in events:
             grouped[event.route].append(event)
 
-        errors = sum(event.outcome != "success" for event in events)
         return {
-            "invocations_total": len(events),
-            "errors_total": errors,
+            "invocations_total": invocations_total,
+            "errors_total": errors_total,
             "success_rate": round(
-                (len(events) - errors) / len(events), 4
+                (invocations_total - errors_total) / invocations_total, 4
             )
-            if events
+            if invocations_total
             else 1.0,
+            "events_retained": len(events),
+            "events_dropped_total": invocations_total - len(events),
             "routes": {
                 route: self._route_metrics(route_events)
                 for route, route_events in sorted(grouped.items())

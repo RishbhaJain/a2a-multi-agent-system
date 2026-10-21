@@ -31,7 +31,7 @@ gates make the measurements reproducible.
 - Margin-based abstention when two strongly supported routes conflict
 - Golden-set and perturbation evaluation harnesses with versioned failure matrices
 - A constrained Python runner with policy denials, resource limits, and safety tests
-- Production reliability controls, single-probe circuit recovery, and privacy-safe route-level telemetry
+- Production reliability controls, single-probe circuit recovery, and bounded, privacy-safe route-level telemetry
 
 ## System at a glance
 
