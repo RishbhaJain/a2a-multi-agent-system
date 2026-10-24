@@ -10,6 +10,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
+from url_safety import UnsafeURL, validate_public_http_url
+
 
 class WebBrowsingAgent:
     """Agent that can browse the web and interact with websites"""
@@ -206,7 +208,12 @@ class WebBrowsingAgent:
             if not urls:
                 return "Error: No URL found in the request"
             
-            url = urls[0]
+            url = urls[0].rstrip(".,;:!?)]}")
+            try:
+                url = validate_public_http_url(url)
+            except UnsafeURL as exc:
+                return f"Error: URL rejected by safety policy: {exc}"
+
             self.driver.get(url)
             time.sleep(2)
             

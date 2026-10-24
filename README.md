@@ -31,6 +31,7 @@ gates make the measurements reproducible.
 - Margin-based abstention when two strongly supported routes conflict
 - Golden-set and perturbation evaluation harnesses with versioned failure matrices
 - A constrained Python runner with policy denials, resource limits, and safety tests
+- Fail-closed browser URL validation that blocks local, private, and reserved networks
 - Production reliability controls, single-probe circuit recovery, and bounded, privacy-safe route-level telemetry
 
 ## System at a glance
@@ -385,6 +386,14 @@ tests in CI.
 This is defense in depth for a portfolio system, not a hardened isolation
 boundary. Adversarial untrusted code should run in a network-denied container or
 microVM with an unprivileged user and a read-only filesystem.
+
+### Browser Network Boundary
+
+User-supplied browser URLs are limited to HTTP and HTTPS destinations whose DNS
+answers are all globally routable. Loopback, private, link-local, reserved,
+mixed public/private, credential-bearing, and unresolvable destinations are
+rejected before Selenium navigates, reducing server-side request forgery risk.
+The policy and fail-closed behavior are covered by credential-free CI tests.
 
 ## 🔍 Troubleshooting
 

@@ -31,6 +31,7 @@ jobs:
             a2a_simple/agent_resilience.py \
             a2a_simple/telemetry.py \
             a2a_simple/execution_sandbox.py \
+            a2a_simple/url_safety.py \
             a2a_simple/code_agent.py \
             a2a_simple/code_execution_agent.py \
             a2a_simple/routing_policy.py \
@@ -41,6 +42,7 @@ jobs:
             a2a_simple/test_execution_evaluation.py \
             a2a_simple/test_agent_resilience.py \
             a2a_simple/test_credential_hygiene.py \
+            a2a_simple/test_url_safety.py \
             a2a_simple/test_telemetry.py \
             a2a_simple/test_selective_routing.py \
             a2a_simple/test_router_robustness.py
@@ -57,6 +59,11 @@ jobs:
 
       - name: Enforce credential hygiene
         run: python -m unittest a2a_simple.test_credential_hygiene -v
+
+      - name: Block browser requests to non-public networks
+        env:
+          PYTHONPATH: a2a_simple
+        run: python -m unittest a2a_simple.test_url_safety -v
 
       - name: Run constrained execution tests
         run: |
