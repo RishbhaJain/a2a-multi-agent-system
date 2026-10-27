@@ -30,6 +30,7 @@ jobs:
             a2a_simple/router_agent.py \
             a2a_simple/agent_resilience.py \
             a2a_simple/telemetry.py \
+            a2a_simple/memory_agent.py \
             a2a_simple/execution_sandbox.py \
             a2a_simple/url_safety.py \
             a2a_simple/code_agent.py \
@@ -44,6 +45,7 @@ jobs:
             a2a_simple/test_credential_hygiene.py \
             a2a_simple/test_url_safety.py \
             a2a_simple/test_telemetry.py \
+            a2a_simple/test_memory_agent.py \
             a2a_simple/test_selective_routing.py \
             a2a_simple/test_router_robustness.py
 
@@ -56,6 +58,11 @@ jobs:
         env:
           PYTHONPATH: a2a_simple
         run: python -m unittest a2a_simple.test_telemetry -v
+
+      - name: Test crash-safe persistent memory
+        env:
+          PYTHONPATH: a2a_simple
+        run: python -m unittest a2a_simple.test_memory_agent -v
 
       - name: Enforce credential hygiene
         run: python -m unittest a2a_simple.test_credential_hygiene -v

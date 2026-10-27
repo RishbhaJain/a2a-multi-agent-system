@@ -33,6 +33,7 @@ gates make the measurements reproducible.
 - A constrained Python runner with policy denials, resource limits, and safety tests
 - Fail-closed browser URL validation that blocks local, private, and reserved networks
 - Production reliability controls, single-probe circuit recovery, and bounded, privacy-safe route-level telemetry
+- Thread-safe persistent memory with atomic commits and fail-closed corruption handling
 
 ## System at a glance
 
