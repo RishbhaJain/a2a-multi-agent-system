@@ -78,6 +78,8 @@ class AgentTelemetryTests(unittest.TestCase):
         self.assertEqual(snapshot["success_rate"], 0.6667)
         self.assertEqual(snapshot["routes"]["math"]["p50_latency_ms"], 10.0)
         self.assertEqual(snapshot["routes"]["math"]["p95_latency_ms"], 30.0)
+        self.assertEqual(snapshot["routes"]["math"]["success_rate"], 0.5)
+        self.assertEqual(snapshot["routes"]["math"]["latency_samples"], 2)
         self.assertEqual(snapshot["routes"]["hash"]["invocations"], 1)
 
     def test_finish_is_idempotent_and_does_not_double_count(self) -> None:
@@ -107,7 +109,7 @@ class AgentTelemetryTests(unittest.TestCase):
 
         first = telemetry.start()
         first.set_route("math")
-        first.finish()
+        first.fail(RuntimeError())
         second = telemetry.start()
         second.set_route("web")
         second.fail(TimeoutError())
@@ -117,11 +119,21 @@ class AgentTelemetryTests(unittest.TestCase):
 
         snapshot = telemetry.snapshot()
         self.assertEqual(snapshot["invocations_total"], 3)
-        self.assertEqual(snapshot["errors_total"], 1)
-        self.assertEqual(snapshot["success_rate"], 0.6667)
+        self.assertEqual(snapshot["errors_total"], 2)
+        self.assertEqual(snapshot["success_rate"], 0.3333)
         self.assertEqual(snapshot["events_retained"], 2)
         self.assertEqual(snapshot["events_dropped_total"], 1)
-        self.assertNotIn("math", snapshot["routes"])
+        self.assertEqual(
+            snapshot["routes"]["math"],
+            {
+                "invocations": 1,
+                "errors": 1,
+                "success_rate": 0.0,
+                "latency_samples": 0,
+                "p50_latency_ms": 0.0,
+                "p95_latency_ms": 0.0,
+            },
+        )
         self.assertEqual(snapshot["routes"]["web"]["errors"], 1)
 
     def test_rejects_non_positive_event_limit(self) -> None:
