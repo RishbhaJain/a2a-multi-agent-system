@@ -338,13 +338,16 @@ decision. It does not claim final-answer quality from Gemini or browser tools.
 ## 🌐 API Endpoints
 
 - `GET /.well-known/agent-card.json`: Agent capabilities and metadata
-- `GET /metrics`: Process-local success, error, p50, and p95 metrics by route
+- `GET /metrics`: Process-local lifetime success/error totals and retained-window p50/p95 metrics by route
 - `POST /`: Main A2A message endpoint
 
 Every invocation also emits a structured JSON trace with a request ID, selected
 route, outcome, latency, and input sizes. Prompt text, uploaded file contents,
 and exception messages are deliberately excluded so operational logs do not
-become a second store for sensitive user data.
+become a second store for sensitive user data. The event buffer is bounded,
+while per-route invocation, error, and success-rate counters remain exact for
+the process lifetime. Route latency percentiles report their retained sample
+count so operators can distinguish a full history from a bounded window.
 
 External math, hash, image, web, and code routes have a 30-second deadline.
 Three consecutive failures open only that route's circuit for 30 seconds, which

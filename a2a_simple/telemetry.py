@@ -107,6 +107,8 @@ class AgentTelemetry:
         self._events: deque[InvocationEvent] = deque(maxlen=max_events)
         self._invocations_total = 0
         self._errors_total = 0
+        self._route_invocations_total: dict[str, int] = defaultdict(int)
+        self._route_errors_total: dict[str, int] = defaultdict(int)
 
     @staticmethod
     def _default_logger() -> logging.Logger:
@@ -137,8 +139,10 @@ class AgentTelemetry:
         with self._lock:
             self._events.append(event)
             self._invocations_total += 1
+            self._route_invocations_total[event.route] += 1
             if event.outcome != "success":
                 self._errors_total += 1
+                self._route_errors_total[event.route] += 1
         self.logger.info(
             "%s", json.dumps(asdict(event), sort_keys=True, separators=(",", ":"))
         )
@@ -149,6 +153,8 @@ class AgentTelemetry:
             events = tuple(self._events)
             invocations_total = self._invocations_total
             errors_total = self._errors_total
+            route_invocations_total = dict(self._route_invocations_total)
+            route_errors_total = dict(self._route_errors_total)
 
         grouped: dict[str, list[InvocationEvent]] = defaultdict(list)
         for event in events:
@@ -165,18 +171,31 @@ class AgentTelemetry:
             "events_retained": len(events),
             "events_dropped_total": invocations_total - len(events),
             "routes": {
-                route: self._route_metrics(route_events)
-                for route, route_events in sorted(grouped.items())
+                route: self._route_metrics(
+                    grouped.get(route, []),
+                    invocations_total=route_invocations_total[route],
+                    errors_total=route_errors_total.get(route, 0),
+                )
+                for route in sorted(route_invocations_total)
             },
         }
 
     @staticmethod
-    def _route_metrics(events: list[InvocationEvent]) -> dict[str, float | int]:
+    def _route_metrics(
+        events: list[InvocationEvent],
+        *,
+        invocations_total: int,
+        errors_total: int,
+    ) -> dict[str, float | int]:
+        """Return exact route totals plus latency metrics from retained samples."""
         latencies = sorted(event.latency_ms for event in events)
-        errors = sum(event.outcome != "success" for event in events)
         return {
-            "invocations": len(events),
-            "errors": errors,
+            "invocations": invocations_total,
+            "errors": errors_total,
+            "success_rate": round(
+                (invocations_total - errors_total) / invocations_total, 4
+            ),
+            "latency_samples": len(latencies),
             "p50_latency_ms": AgentTelemetry._percentile(latencies, 0.50),
             "p95_latency_ms": AgentTelemetry._percentile(latencies, 0.95),
         }
