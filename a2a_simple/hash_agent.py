@@ -2,6 +2,8 @@ import hashlib
 import re
 from typing import List
 
+from agent_resilience import AgentOperationError
+
 
 class HashAgent:
     """Hash agent that executes sequences of MD5 and SHA512 operations"""
@@ -23,8 +25,8 @@ class HashAgent:
             
             return f"Hash sequence completed successfully!\n\nInput: '{input_string}'\nOperations: {', '.join(operations)}\nFinal result: {result}"
             
-        except Exception as e:
-            return f"I encountered an error while executing the hash operations: {str(e)}"
+        except Exception as exc:
+            raise AgentOperationError("hash agent operation failed") from exc
 
     def _parse_operation(self, description: str) -> tuple[str, List[str]]:
         """Parse the operation description to extract input string and operations"""

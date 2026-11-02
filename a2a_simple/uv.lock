@@ -42,7 +42,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "a2a-sdk", specifier = ">=0.2.5" },
+    { name = "a2a-sdk", specifier = "==0.2.5" },
     { name = "beautifulsoup4", specifier = ">=4.12.0" },
     { name = "google-generativeai", specifier = ">=0.8.0" },
     { name = "pillow", specifier = ">=11.3.0" },

@@ -25,6 +25,10 @@ class AgentRouteSaturated(RuntimeError):
     """Raised when a route has reached its configured concurrency limit."""
 
 
+class AgentOperationError(RuntimeError):
+    """Raised when a delegated agent fails without exposing provider details."""
+
+
 @dataclass
 class _CircuitState:
     consecutive_failures: int = 0

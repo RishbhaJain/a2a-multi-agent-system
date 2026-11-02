@@ -2,6 +2,8 @@ import google.generativeai as genai
 import os
 from typing import Optional
 
+from agent_resilience import AgentOperationError
+
 
 class ImageRecognitionAgent:
     """Image recognition agent that identifies entities in images using Gemini Vision API"""
@@ -33,5 +35,5 @@ class ImageRecognitionAgent:
             else:
                 return "I couldn't identify the main entity in this image."
                 
-        except Exception as e:
-            return f"I encountered an error while processing the image: {str(e)}"
+        except Exception as exc:
+            raise AgentOperationError("image agent operation failed") from exc
