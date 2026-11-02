@@ -8,6 +8,8 @@ import google.generativeai as genai
 import os
 import re
 
+from agent_resilience import AgentOperationError
+
 
 class MathAgent(BaseModel):
     """Math agent that solves basic math problems using Gemini API"""
@@ -42,8 +44,8 @@ class MathAgent(BaseModel):
             response = self.model.generate_content(math_prompt)
             return response.text
             
-        except Exception as e:
-            return f"I encountered an error while solving the math problem: {str(e)}"
+        except Exception as exc:
+            raise AgentOperationError("math agent operation failed") from exc
 
 
 class MathAgentExecutor(AgentExecutor):

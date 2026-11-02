@@ -5,6 +5,7 @@ import asyncio
 import os
 import google.generativeai as genai
 
+from agent_resilience import AgentOperationError
 from execution_sandbox import UnsafeCodeError, execute_python
 
 
@@ -38,10 +39,8 @@ class CodeExecutionAgent:
             
             return final_result
             
-        except Exception as e:
-            error_msg = f"Error in code generation/execution: {str(e)}"
-            print(f"❌ {error_msg}")
-            return error_msg
+        except Exception as exc:
+            raise AgentOperationError("code agent operation failed") from exc
     
     async def _generate_code(self, prompt: str) -> str:
         """Generate Python code using Gemini API"""

@@ -10,6 +10,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
+from agent_resilience import AgentOperationError
 from url_safety import UnsafeURL, validate_public_http_url
 
 
@@ -33,9 +34,8 @@ class WebBrowsingAgent:
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
             self.wait = WebDriverWait(self.driver, 10)
             return True
-        except Exception as e:
-            print(f"Error setting up driver: {e}")
-            return False
+        except Exception as exc:
+            raise AgentOperationError("web browser setup failed") from exc
     
     def _cleanup_driver(self):
         """Close the browser driver"""
@@ -55,8 +55,10 @@ class WebBrowsingAgent:
             else:
                 return await self._general_browsing(prompt)
                 
-        except Exception as e:
-            return f"Error in web browsing: {str(e)}"
+        except AgentOperationError:
+            raise
+        except Exception as exc:
+            raise AgentOperationError("web agent operation failed") from exc
         finally:
             self._cleanup_driver()
     
@@ -84,8 +86,8 @@ class WebBrowsingAgent:
             else:
                 return "Error: Could not find secret number"
                 
-        except Exception as e:
-            return f"Error playing Tic-Tac-Toe: {str(e)}"
+        except Exception as exc:
+            raise AgentOperationError("web game operation failed") from exc
     
     def _find_game_board(self):
         """Find the Tic-Tac-Toe game board"""
@@ -223,5 +225,5 @@ class WebBrowsingAgent:
             
             return f"Page Title: {title}\n\nContent Preview:\n{content}..."
             
-        except Exception as e:
-            return f"Error browsing website: {str(e)}"
+        except Exception as exc:
+            raise AgentOperationError("web browsing operation failed") from exc

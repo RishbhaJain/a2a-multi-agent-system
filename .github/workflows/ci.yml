@@ -23,6 +23,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install agent dependencies
+        run: python -m pip install -e ./a2a_simple
+
       - name: Compile evaluation and execution modules
         run: |
           python -m py_compile \
@@ -41,6 +44,7 @@ jobs:
             a2a_simple/evals/evaluate_robustness.py \
             a2a_simple/evals/evaluate_execution.py \
             a2a_simple/test_execution_evaluation.py \
+            a2a_simple/test_agent_failure_propagation.py \
             a2a_simple/test_agent_resilience.py \
             a2a_simple/test_credential_hygiene.py \
             a2a_simple/test_url_safety.py \
@@ -52,7 +56,9 @@ jobs:
       - name: Test per-route timeout and circuit-breaker behavior
         env:
           PYTHONPATH: a2a_simple
-        run: python -m unittest a2a_simple.test_agent_resilience -v
+        run: |
+          python -m unittest a2a_simple.test_agent_resilience -v
+          python -m unittest a2a_simple.test_agent_failure_propagation -v
 
       - name: Test content-safe agent telemetry
         env:

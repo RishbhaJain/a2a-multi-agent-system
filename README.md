@@ -32,7 +32,7 @@ gates make the measurements reproducible.
 - Golden-set and perturbation evaluation harnesses with versioned failure matrices
 - A constrained Python runner with policy denials, resource limits, and safety tests
 - Fail-closed browser URL validation that blocks local, private, and reserved networks
-- Production reliability controls, single-probe circuit recovery, and bounded, privacy-safe route-level telemetry
+- Production reliability controls, single-probe circuit recovery, typed failure propagation, and bounded, privacy-safe route-level telemetry
 - Thread-safe persistent memory with atomic commits and fail-closed corruption handling
 
 ## System at a glance
@@ -352,6 +352,9 @@ count so operators can distinguish a full history from a bounded window.
 External math, hash, image, web, and code routes have a 30-second deadline.
 Three consecutive failures open only that route's circuit for 30 seconds, which
 prevents a failing dependency from consuming capacity across the whole router.
+Delegated agents propagate unexpected provider, browser, and execution failures
+through a sanitized typed boundary, so failures cannot masquerade as successful
+text responses or leak provider details into callers and telemetry.
 After cooldown, the circuit becomes half-open and admits exactly one recovery
 probe. Other requests continue to fail fast until that probe succeeds; a failed
 probe restarts the cooldown instead of causing a recovery stampede. Caller
