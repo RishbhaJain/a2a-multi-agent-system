@@ -1,7 +1,13 @@
 from collections.abc import Awaitable, Callable
+import re
 from typing import Optional
 
-from agent_resilience import AgentBulkhead, CircuitBreaker, invoke_with_resilience
+from agent_resilience import (
+    AgentBulkhead,
+    AgentOperationError,
+    CircuitBreaker,
+    invoke_with_resilience,
+)
 from agent_executor import MathAgent
 from hash_agent import HashAgent
 from image_agent import ImageRecognitionAgent
@@ -111,59 +117,54 @@ class RouterAgent:
         """Handle memory-related requests"""
         try:
             question_lower = question.lower()
-            
+
             # Check if this is a store request
             if any(word in question_lower for word in ["remember", "store", "save"]):
                 return self._parse_store_request(question)
-            
+
             # Check if this is a retrieve request
-            elif any(word in question_lower for word in ["recall", "retrieve", "what was", "previously", "check your memory", "tell me"]):
+            if any(
+                word in question_lower
+                for word in [
+                    "recall",
+                    "retrieve",
+                    "what was",
+                    "previously",
+                    "check your memory",
+                    "tell me",
+                ]
+            ):
                 return self._parse_retrieve_request(question)
-            
-            else:
-                return "I can help you store or retrieve information from memory. Please specify what you'd like to remember or recall."
-                
-        except Exception as e:
-            return f"Error handling memory request: {str(e)}"
-    
+
+            return (
+                "I can help you store or retrieve information from memory. "
+                "Please specify what you'd like to remember or recall."
+            )
+        except Exception as exc:
+            raise AgentOperationError("memory agent operation failed") from exc
+
     def _parse_store_request(self, question: str) -> str:
         """Parse and handle store requests"""
-        try:
-            # Look for number pairs in the format "X and Y"
-            import re
-            
-            # Pattern to find "number and number"
-            pattern = r'(\d+)\s+and\s+(\d+)'
-            match = re.search(pattern, question)
-            
-            if match:
-                key = match.group(1)
-                value = match.group(2)
-                return self.memory_agent.store(key, value)
-            else:
-                return "I couldn't find a number pair to store. Please use the format 'X and Y'."
-                
-        except Exception as e:
-            return f"Error parsing store request: {str(e)}"
-    
+        # Look for number pairs in the format "X and Y"
+        pattern = r"(\d+)\s+and\s+(\d+)"
+        match = re.search(pattern, question)
+
+        if match:
+            key = match.group(1)
+            value = match.group(2)
+            return self.memory_agent.store(key, value)
+        return "I couldn't find a number pair to store. Please use the format 'X and Y'."
+
     def _parse_retrieve_request(self, question: str) -> str:
         """Parse and handle retrieve requests"""
-        try:
-            # Look for a number to search for
-            import re
-            
-            # Find numbers in the question
-            numbers = re.findall(r'\d+', question)
-            
-            if numbers:
-                # Use the first number found as search term
-                search_term = numbers[0]
-                return self.memory_agent.retrieve(search_term)
-            else:
-                return "I couldn't find a number to search for. Please specify which number you're looking for."
-                
-        except Exception as e:
-            return f"Error parsing retrieve request: {str(e)}"
+        numbers = re.findall(r"\d+", question)
+
+        if numbers:
+            return self.memory_agent.retrieve(numbers[0])
+        return (
+            "I couldn't find a number to search for. "
+            "Please specify which number you're looking for."
+        )
 
     def _classify_question(self, question: str) -> str:
         """Classify a request with the versioned, evaluated routing policy."""

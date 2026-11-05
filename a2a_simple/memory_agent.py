@@ -72,23 +72,17 @@ class MemoryAgent:
 
     def store(self, key: str, value: str) -> str:
         """Store a key-value pair only after its atomic commit succeeds."""
-        try:
-            with self._lock:
-                entry = {
-                    "id": str(len(self.memory_data["entries"]) + 1),
-                    "key": key,
-                    "value": value,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                }
-                updated_memory = {
-                    "entries": [*self.memory_data["entries"], entry]
-                }
-                self._save_memory(updated_memory)
-                self.memory_data = updated_memory
-            return f"Stored: {key} = {value}"
-
-        except MemoryPersistenceError as exc:
-            return f"Error storing memory: {exc}"
+        with self._lock:
+            entry = {
+                "id": str(len(self.memory_data["entries"]) + 1),
+                "key": key,
+                "value": value,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+            updated_memory = {"entries": [*self.memory_data["entries"], entry]}
+            self._save_memory(updated_memory)
+            self.memory_data = updated_memory
+        return f"Stored: {key} = {value}"
 
     def retrieve(self, search_term: str) -> str:
         """Retrieve information from the current in-process snapshot."""
@@ -101,11 +95,8 @@ class MemoryAgent:
 
     def clear(self) -> str:
         """Clear memory only after the empty snapshot is committed."""
-        try:
-            with self._lock:
-                empty_memory: dict[str, list[dict[str, str]]] = {"entries": []}
-                self._save_memory(empty_memory)
-                self.memory_data = empty_memory
-            return "Memory cleared successfully"
-        except MemoryPersistenceError as exc:
-            return f"Error clearing memory: {exc}"
+        with self._lock:
+            empty_memory: dict[str, list[dict[str, str]]] = {"entries": []}
+            self._save_memory(empty_memory)
+            self.memory_data = empty_memory
+        return "Memory cleared successfully"

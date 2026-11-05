@@ -12,6 +12,7 @@ from agent_resilience import (
 from code_execution_agent import CodeExecutionAgent
 from hash_agent import HashAgent
 from image_agent import ImageRecognitionAgent
+from memory_agent import MemoryPersistenceError
 from router_agent import RouterAgent
 from telemetry import AgentTelemetry
 from web_agent import WebBrowsingAgent
@@ -30,6 +31,11 @@ class FailingAsyncModel:
 class FailingAgent:
     async def invoke(self, *_args, **_kwargs):
         raise AgentOperationError("secret provider detail")
+
+
+class FailingMemoryAgent:
+    def store(self, *_args, **_kwargs):
+        raise MemoryPersistenceError("secret memory path")
 
 
 class AgentFailurePropagationTests(unittest.IsolatedAsyncioTestCase):
@@ -93,6 +99,27 @@ class AgentFailurePropagationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(telemetry.snapshot()["errors_total"], 1)
         self.assertIn('"error_type":"AgentOperationError"', stream.getvalue())
         self.assertNotIn("secret provider detail", stream.getvalue())
+
+    async def test_memory_failure_uses_same_sanitized_router_boundary(self) -> None:
+        stream = io.StringIO()
+        logger = logging.Logger("test.memory.failure")
+        logger.addHandler(logging.StreamHandler(stream))
+        telemetry = AgentTelemetry(logger=logger)
+
+        router = RouterAgent.__new__(RouterAgent)
+        router.memory_agent = FailingMemoryAgent()
+        router.telemetry = telemetry
+
+        result = await router.invoke("Remember 123 and 456", request_id="req-memory")
+
+        self.assertEqual(
+            result,
+            "The selected agent is temporarily unavailable. "
+            "Please try the request again.",
+        )
+        self.assertEqual(telemetry.snapshot()["errors_total"], 1)
+        self.assertIn('"error_type":"AgentOperationError"', stream.getvalue())
+        self.assertNotIn("secret memory path", stream.getvalue())
 
 
 if __name__ == "__main__":
