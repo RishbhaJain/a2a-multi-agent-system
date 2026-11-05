@@ -43,9 +43,9 @@ class MemoryAgentTests(unittest.TestCase):
             original_payload = memory_path.read_text(encoding="utf-8")
 
             with patch("memory_agent.os.replace", side_effect=OSError("disk failure")):
-                result = agent.store("uncommitted", "value")
+                with self.assertRaisesRegex(MemoryPersistenceError, "Could not save"):
+                    agent.store("uncommitted", "value")
 
-            self.assertIn("Error storing memory", result)
             self.assertEqual(memory_path.read_text(encoding="utf-8"), original_payload)
             self.assertEqual(len(agent.memory_data["entries"]), 1)
             self.assertEqual(list(Path(directory).glob(".*.tmp")), [])
@@ -67,9 +67,9 @@ class MemoryAgentTests(unittest.TestCase):
             agent.store("stable", "value")
 
             with patch("memory_agent.os.replace", side_effect=OSError("disk failure")):
-                result = agent.clear()
+                with self.assertRaisesRegex(MemoryPersistenceError, "Could not save"):
+                    agent.clear()
 
-            self.assertIn("Error clearing memory", result)
             self.assertEqual(agent.retrieve("stable"), "Found: stable = value")
             persisted = json.loads(memory_path.read_text(encoding="utf-8"))
             self.assertEqual(len(persisted["entries"]), 1)
