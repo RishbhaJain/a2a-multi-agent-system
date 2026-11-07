@@ -1,3 +1,4 @@
+import hmac
 import io
 import json
 import logging
@@ -34,13 +35,36 @@ class AgentTelemetryTests(unittest.TestCase):
         event = span.finish()
 
         payload = json.loads(stream.getvalue())
-        self.assertEqual(payload["request_id"], "req-123")
+        self.assertTrue(payload["request_id"].startswith("external_"))
+        self.assertNotIn("req-123", stream.getvalue())
         self.assertEqual(payload["route"], "image")
         self.assertEqual(payload["latency_ms"], 125.0)
         self.assertEqual(payload["input_text_chars"], 22)
         self.assertEqual(payload["input_image_bytes"], 512)
         self.assertNotIn("prompt", payload)
         self.assertEqual(event.outcome, "success")
+
+    def test_external_request_ids_are_pseudonymized_but_correlatable(self) -> None:
+        logger, stream = capturing_logger()
+        key = b"test-correlation-key"
+        telemetry = AgentTelemetry(
+            logger=logger,
+            clock=FakeClock(1.0, 1.01, 2.0, 2.01, 3.0, 3.01),
+            correlation_key=key,
+        )
+
+        first = telemetry.start(request_id="customer@example.com")
+        first.finish()
+        repeated = telemetry.start(request_id="customer@example.com")
+        repeated.finish()
+        different = telemetry.start(request_id="another@example.com")
+        different.finish()
+
+        expected = hmac.digest(key, b"customer@example.com", "sha256").hex()[:32]
+        self.assertEqual(first.request_id, f"external_{expected}")
+        self.assertEqual(repeated.request_id, first.request_id)
+        self.assertNotEqual(different.request_id, first.request_id)
+        self.assertNotIn("customer@example.com", stream.getvalue())
 
     def test_failure_records_exception_type_without_message(self) -> None:
         logger, stream = capturing_logger()
