@@ -7,9 +7,11 @@ uploaded files.
 
 from __future__ import annotations
 
+import hmac
 import json
 import logging
 import math
+import secrets
 import threading
 import time
 import uuid
@@ -98,11 +100,13 @@ class AgentTelemetry:
         logger: logging.Logger | None = None,
         clock: Callable[[], float] = time.perf_counter,
         max_events: int = 10_000,
+        correlation_key: bytes | None = None,
     ) -> None:
         if max_events <= 0:
             raise ValueError("max_events must be positive")
         self.clock = clock
         self.logger = logger or self._default_logger()
+        self._correlation_key = correlation_key or secrets.token_bytes(32)
         self._lock = threading.Lock()
         self._events: deque[InvocationEvent] = deque(maxlen=max_events)
         self._invocations_total = 0
@@ -130,10 +134,21 @@ class AgentTelemetry:
             raise ValueError("input sizes must be non-negative")
         return InvocationSpan(
             self,
-            request_id=request_id or uuid.uuid4().hex,
+            request_id=self._request_token(request_id),
             input_text_chars=input_text_chars,
             input_image_bytes=input_image_bytes,
         )
+
+    def _request_token(self, request_id: str | None) -> str:
+        """Return a correlatable token without retaining an external identifier."""
+        if not request_id:
+            return uuid.uuid4().hex
+        digest = hmac.digest(
+            self._correlation_key,
+            request_id.encode("utf-8"),
+            "sha256",
+        )
+        return f"external_{digest.hex()[:32]}"
 
     def record(self, event: InvocationEvent) -> None:
         with self._lock:
