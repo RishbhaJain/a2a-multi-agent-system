@@ -195,6 +195,60 @@ class AgentTelemetry:
             },
         }
 
+    def prometheus_snapshot(self) -> str:
+        """Render content-safe process metrics in Prometheus text format."""
+        snapshot = self.snapshot()
+        lines = [
+            "# HELP a2a_agent_invocations_total Agent invocations since process start.",
+            "# TYPE a2a_agent_invocations_total counter",
+            f"a2a_agent_invocations_total {snapshot['invocations_total']}",
+            "# HELP a2a_agent_errors_total Failed agent invocations since process start.",
+            "# TYPE a2a_agent_errors_total counter",
+            f"a2a_agent_errors_total {snapshot['errors_total']}",
+            "# HELP a2a_agent_success_ratio Successful invocation ratio since process start.",
+            "# TYPE a2a_agent_success_ratio gauge",
+            f"a2a_agent_success_ratio {snapshot['success_rate']}",
+            "# HELP a2a_agent_events_dropped_total Events omitted from the bounded latency window.",
+            "# TYPE a2a_agent_events_dropped_total counter",
+            f"a2a_agent_events_dropped_total {snapshot['events_dropped_total']}",
+            "# HELP a2a_agent_route_invocations_total Invocations by selected route.",
+            "# TYPE a2a_agent_route_invocations_total counter",
+            "# HELP a2a_agent_route_errors_total Failed invocations by selected route.",
+            "# TYPE a2a_agent_route_errors_total counter",
+            "# HELP a2a_agent_route_success_ratio Successful invocation ratio by route.",
+            "# TYPE a2a_agent_route_success_ratio gauge",
+            "# HELP a2a_agent_route_latency_samples Retained latency samples by route.",
+            "# TYPE a2a_agent_route_latency_samples gauge",
+            "# HELP a2a_agent_route_latency_milliseconds Retained-window latency percentile by route.",
+            "# TYPE a2a_agent_route_latency_milliseconds gauge",
+        ]
+        routes = snapshot["routes"]
+        for route, metrics in routes.items():
+            route_label = self._prometheus_label(route)
+            labels = f'route="{route_label}"'
+            lines.extend(
+                [
+                    f"a2a_agent_route_invocations_total{{{labels}}} {metrics['invocations']}",
+                    f"a2a_agent_route_errors_total{{{labels}}} {metrics['errors']}",
+                    f"a2a_agent_route_success_ratio{{{labels}}} {metrics['success_rate']}",
+                    f"a2a_agent_route_latency_samples{{{labels}}} {metrics['latency_samples']}",
+                    (
+                        "a2a_agent_route_latency_milliseconds"
+                        f'{{{labels},quantile="0.5"}} {metrics["p50_latency_ms"]}'
+                    ),
+                    (
+                        "a2a_agent_route_latency_milliseconds"
+                        f'{{{labels},quantile="0.95"}} {metrics["p95_latency_ms"]}'
+                    ),
+                ]
+            )
+        return "\n".join(lines) + "\n"
+
+    @staticmethod
+    def _prometheus_label(value: str) -> str:
+        """Escape label values according to the Prometheus text format."""
+        return value.replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
+
     @staticmethod
     def _route_metrics(
         events: list[InvocationEvent],
