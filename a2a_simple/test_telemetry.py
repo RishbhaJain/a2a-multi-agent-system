@@ -164,6 +164,43 @@ class AgentTelemetryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "max_events must be positive"):
             AgentTelemetry(max_events=0)
 
+    def test_prometheus_snapshot_exports_lifetime_and_route_metrics(self) -> None:
+        logger, _ = capturing_logger()
+        telemetry = AgentTelemetry(
+            logger=logger,
+            clock=FakeClock(0.0, 0.01, 1.0, 1.03),
+        )
+        success = telemetry.start()
+        success.set_route("math")
+        success.finish()
+        failure = telemetry.start()
+        failure.set_route("math")
+        failure.fail(TimeoutError())
+
+        metrics = telemetry.prometheus_snapshot()
+
+        self.assertIn("# TYPE a2a_agent_invocations_total counter", metrics)
+        self.assertIn("a2a_agent_invocations_total 2", metrics)
+        self.assertIn("a2a_agent_errors_total 1", metrics)
+        self.assertIn('a2a_agent_route_invocations_total{route="math"} 2', metrics)
+        self.assertIn(
+            'a2a_agent_route_latency_milliseconds{route="math",quantile="0.95"} 30.0',
+            metrics,
+        )
+        self.assertNotIn("request_id", metrics)
+
+    def test_prometheus_snapshot_escapes_route_labels(self) -> None:
+        logger, _ = capturing_logger()
+        telemetry = AgentTelemetry(logger=logger, clock=FakeClock(0.0, 0.01))
+        span = telemetry.start()
+        span.set_route('unsafe"route\\name\nnext')
+        span.finish()
+
+        metrics = telemetry.prometheus_snapshot()
+
+        self.assertIn('route="unsafe\\"route\\\\name\\nnext"', metrics)
+        self.assertNotIn("\nnext\"}", metrics)
+
 
 if __name__ == "__main__":
     unittest.main()

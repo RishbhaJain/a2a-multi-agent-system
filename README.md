@@ -32,7 +32,7 @@ gates make the measurements reproducible.
 - Golden-set and perturbation evaluation harnesses with versioned failure matrices
 - A constrained Python runner with policy denials, resource limits, and safety tests
 - Fail-closed browser URL validation that blocks local, private, and reserved networks
-- Production reliability controls, single-probe circuit recovery, typed failure propagation, and bounded, privacy-safe route-level telemetry
+- Production reliability controls, single-probe circuit recovery, typed failure propagation, and bounded, privacy-safe route-level telemetry with Prometheus export
 - Thread-safe persistent memory with atomic commits and fail-closed corruption handling
 
 ## System at a glance
@@ -339,6 +339,7 @@ decision. It does not claim final-answer quality from Gemini or browser tools.
 
 - `GET /.well-known/agent-card.json`: Agent capabilities and metadata
 - `GET /metrics`: Process-local lifetime success/error totals and retained-window p50/p95 metrics by route
+- `GET /metrics/prometheus`: Prometheus text exposition for process and per-route reliability and latency
 - `POST /`: Main A2A message endpoint
 
 Every invocation also emits a structured JSON trace with a request ID, selected
@@ -348,6 +349,11 @@ become a second store for sensitive user data. The event buffer is bounded,
 while per-route invocation, error, and success-rate counters remain exact for
 the process lifetime. Route latency percentiles report their retained sample
 count so operators can distinguish a full history from a bounded window.
+The Prometheus endpoint exports typed counters and gauges for global and per-route
+traffic, failures, success ratios, retained latency samples, and p50/p95 latency.
+It preserves the same content-safe boundary and escapes route labels before
+exposition, so prompts, uploaded content, request IDs, and exception messages are
+not exported.
 
 External math, hash, image, web, and code routes have a 30-second deadline.
 Three consecutive failures open only that route's circuit for 30 seconds, which

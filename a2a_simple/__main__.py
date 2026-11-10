@@ -10,7 +10,7 @@ from a2a.server.agent_execution.context import RequestContext
 from a2a.server.events.event_queue import EventQueue
 from a2a.utils import new_agent_text_message, new_agent_parts_message
 from a2a.types import DataPart
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, PlainTextResponse
 
 
 class RouterAgentExecutor(AgentExecutor):
@@ -152,7 +152,14 @@ def main():
     async def metrics(_request):
         return JSONResponse(executor.agent.telemetry.snapshot())
 
+    async def prometheus_metrics(_request):
+        return PlainTextResponse(
+            executor.agent.telemetry.prometheus_snapshot(),
+            media_type="text/plain; version=0.0.4",
+        )
+
     app.add_route("/metrics", metrics, methods=["GET"])
+    app.add_route("/metrics/prometheus", prometheus_metrics, methods=["GET"])
     
     # Add CORS middleware
     app.add_middleware(
