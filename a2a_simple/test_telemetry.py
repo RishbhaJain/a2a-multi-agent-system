@@ -4,7 +4,7 @@ import json
 import logging
 import unittest
 
-from telemetry import AgentTelemetry
+from telemetry import AgentTelemetry, render_resilience_prometheus
 
 
 class FakeClock:
@@ -200,6 +200,50 @@ class AgentTelemetryTests(unittest.TestCase):
 
         self.assertIn('route="unsafe\\"route\\\\name\\nnext"', metrics)
         self.assertNotIn("\nnext\"}", metrics)
+
+    def test_resilience_metrics_export_circuit_and_bulkhead_state(self) -> None:
+        metrics = render_resilience_prometheus(
+            {
+                "web": {
+                    "consecutive_failures": 3,
+                    "open": True,
+                    "state": "open",
+                }
+            },
+            {"web": {"in_flight": 2, "capacity": 4}},
+        )
+
+        self.assertIn(
+            'a2a_agent_circuit_consecutive_failures{route="web"} 3', metrics
+        )
+        self.assertIn(
+            'a2a_agent_circuit_state{route="web",state="open"} 1', metrics
+        )
+        self.assertIn(
+            'a2a_agent_circuit_state{route="web",state="closed"} 0', metrics
+        )
+        self.assertIn('a2a_agent_bulkhead_in_flight{route="web"} 2', metrics)
+        self.assertIn('a2a_agent_bulkhead_capacity{route="web"} 4', metrics)
+        self.assertIn(
+            'a2a_agent_bulkhead_utilization_ratio{route="web"} 0.5', metrics
+        )
+
+    def test_resilience_metrics_escape_route_labels_and_exclude_payloads(self) -> None:
+        route = 'web"route\\name\nnext'
+        metrics = render_resilience_prometheus(
+            {
+                route: {
+                    "consecutive_failures": 0,
+                    "open": False,
+                    "state": "closed",
+                }
+            },
+            {route: {"in_flight": 0, "capacity": 8}},
+        )
+
+        self.assertIn('route="web\\"route\\\\name\\nnext"', metrics)
+        self.assertNotIn("request_id", metrics)
+        self.assertNotIn("prompt", metrics)
 
 
 if __name__ == "__main__":

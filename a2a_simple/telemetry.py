@@ -21,6 +21,59 @@ from datetime import datetime, timezone
 from typing import Callable
 
 
+_CIRCUIT_STATES = ("closed", "open", "half_open")
+
+
+def render_resilience_prometheus(
+    circuit_breakers: dict[str, dict[str, int | bool | str]],
+    bulkheads: dict[str, dict[str, int]],
+) -> str:
+    """Render content-free circuit and concurrency state for operations."""
+    lines = [
+        "# HELP a2a_agent_circuit_consecutive_failures Consecutive failures by route.",
+        "# TYPE a2a_agent_circuit_consecutive_failures gauge",
+        "# HELP a2a_agent_circuit_state Current circuit state as a one-hot gauge.",
+        "# TYPE a2a_agent_circuit_state gauge",
+        "# HELP a2a_agent_bulkhead_in_flight Active delegated calls by route.",
+        "# TYPE a2a_agent_bulkhead_in_flight gauge",
+        "# HELP a2a_agent_bulkhead_capacity Maximum concurrent calls by route.",
+        "# TYPE a2a_agent_bulkhead_capacity gauge",
+        "# HELP a2a_agent_bulkhead_utilization_ratio Route concurrency utilization.",
+        "# TYPE a2a_agent_bulkhead_utilization_ratio gauge",
+    ]
+    for route, metrics in sorted(circuit_breakers.items()):
+        route_label = AgentTelemetry._prometheus_label(route)
+        labels = f'route="{route_label}"'
+        lines.append(
+            "a2a_agent_circuit_consecutive_failures"
+            f"{{{labels}}} {metrics['consecutive_failures']}"
+        )
+        current_state = str(metrics["state"])
+        for state in _CIRCUIT_STATES:
+            lines.append(
+                "a2a_agent_circuit_state"
+                f'{{{labels},state="{state}"}} {int(state == current_state)}'
+            )
+
+    for route, metrics in sorted(bulkheads.items()):
+        route_label = AgentTelemetry._prometheus_label(route)
+        labels = f'route="{route_label}"'
+        in_flight = metrics["in_flight"]
+        capacity = metrics["capacity"]
+        utilization = round(in_flight / capacity, 4) if capacity else 0.0
+        lines.extend(
+            [
+                f"a2a_agent_bulkhead_in_flight{{{labels}}} {in_flight}",
+                f"a2a_agent_bulkhead_capacity{{{labels}}} {capacity}",
+                (
+                    "a2a_agent_bulkhead_utilization_ratio"
+                    f"{{{labels}}} {utilization}"
+                ),
+            ]
+        )
+    return "\n".join(lines) + "\n"
+
+
 @dataclass(frozen=True)
 class InvocationEvent:
     request_id: str
