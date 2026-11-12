@@ -15,7 +15,7 @@ from web_agent import WebBrowsingAgent
 from memory_agent import MemoryAgent
 from code_execution_agent import CodeExecutionAgent
 from routing_policy import classify_question
-from telemetry import AgentTelemetry
+from telemetry import AgentTelemetry, render_resilience_prometheus
 
 
 class RouterAgent:
@@ -205,3 +205,19 @@ class RouterAgent:
    - Example: "Write a program that computes the sum of squares of all prime numbers from 1 to n, modulo 1000"
 
 Please rephrase your question with more specific details about what you'd like me to help you with."""
+
+    def operational_snapshot(self) -> dict[str, object]:
+        """Return content-free service and resilience state for operators."""
+        snapshot = self.telemetry.snapshot()
+        snapshot["resilience"] = {
+            "circuit_breakers": self.circuit_breaker.snapshot(),
+            "bulkheads": self.bulkhead.snapshot(),
+        }
+        return snapshot
+
+    def prometheus_snapshot(self) -> str:
+        """Render request and resilience signals in Prometheus text format."""
+        return self.telemetry.prometheus_snapshot() + render_resilience_prometheus(
+            self.circuit_breaker.snapshot(),
+            self.bulkhead.snapshot(),
+        )

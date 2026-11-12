@@ -150,11 +150,11 @@ def main():
     app = server.build(agent_card_url="/.well-known/agent-card.json")
 
     async def metrics(_request):
-        return JSONResponse(executor.agent.telemetry.snapshot())
+        return JSONResponse(executor.agent.operational_snapshot())
 
     async def prometheus_metrics(_request):
         return PlainTextResponse(
-            executor.agent.telemetry.prometheus_snapshot(),
+            executor.agent.prometheus_snapshot(),
             media_type="text/plain; version=0.0.4",
         )
 

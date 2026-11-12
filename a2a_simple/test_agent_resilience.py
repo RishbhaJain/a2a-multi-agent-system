@@ -9,6 +9,8 @@ from agent_resilience import (
     CircuitBreaker,
     invoke_with_resilience,
 )
+from router_agent import RouterAgent
+from telemetry import AgentTelemetry
 
 
 class FakeClock:
@@ -456,6 +458,32 @@ class AgentResilienceTests(unittest.IsolatedAsyncioTestCase):
             CircuitBreaker(recovery_timeout_seconds=0)
         with self.assertRaisesRegex(ValueError, "max_in_flight_per_route"):
             AgentBulkhead(max_in_flight_per_route=0)
+
+    def test_router_operational_snapshot_combines_request_and_resilience_state(
+        self,
+    ) -> None:
+        router = RouterAgent.__new__(RouterAgent)
+        router.telemetry = AgentTelemetry()
+        router.circuit_breaker = CircuitBreaker(failure_threshold=1)
+        router.bulkhead = AgentBulkhead(max_in_flight_per_route=4)
+
+        router.circuit_breaker.record_failure("web")
+        with router.bulkhead.slot("web"):
+            snapshot = router.operational_snapshot()
+
+        self.assertEqual(snapshot["invocations_total"], 0)
+        self.assertEqual(
+            snapshot["resilience"]["circuit_breakers"]["web"]["state"],
+            "open",
+        )
+        self.assertEqual(
+            snapshot["resilience"]["bulkheads"]["web"],
+            {"in_flight": 1, "capacity": 4},
+        )
+        prometheus = router.prometheus_snapshot()
+        self.assertIn(
+            'a2a_agent_circuit_state{route="web",state="open"} 1', prometheus
+        )
 
 
 if __name__ == "__main__":

@@ -220,6 +220,26 @@ python test_integrated_system.py
 
 - `GET /.well-known/agent-card.json`: Agent capabilities and metadata
 - `POST /`: Main A2A message endpoint
+- `GET /metrics`: Content-free request, circuit-breaker, and bulkhead diagnostics
+- `GET /metrics/prometheus`: Prometheus text metrics for reliability dashboards
+
+### Operational observability
+
+The service exposes route-level reliability without retaining prompts, uploads,
+external request identifiers, or exception messages. Request counters and p50/p95
+latency are paired with the operational state needed to diagnose overload and
+provider failures:
+
+| Signal | Purpose |
+|---|---|
+| Circuit state and consecutive failures | Distinguish healthy, open, and recovery-probe routes |
+| Bulkhead in-flight calls and capacity | Identify route-local saturation before it spreads |
+| Bulkhead utilization ratio | Alert on sustained concurrency pressure |
+| Route success ratio and latency | Track user-visible reliability and tail performance |
+
+Both `/metrics` formats are generated from the same in-process state. Route names
+are escaped before Prometheus export, and no user-provided content is used as a
+metric label.
 
 ## 🔒 Security
 
