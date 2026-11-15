@@ -79,6 +79,25 @@ class AgentTelemetryTests(unittest.TestCase):
         self.assertEqual(payload["error_type"], "ValueError")
         self.assertNotIn("secret provider response", stream.getvalue())
 
+    def test_cancellation_is_visible_without_becoming_provider_error(self) -> None:
+        logger, stream = capturing_logger()
+        telemetry = AgentTelemetry(logger=logger, clock=FakeClock(2.0, 2.01))
+        span = telemetry.start(request_id="cancelled-request")
+        span.set_route("web")
+
+        event = span.cancel()
+
+        payload = json.loads(stream.getvalue())
+        snapshot = telemetry.snapshot()
+        self.assertEqual(event.outcome, "cancelled")
+        self.assertEqual(payload["outcome"], "cancelled")
+        self.assertIsNone(payload["error_type"])
+        self.assertEqual(snapshot["invocations_total"], 1)
+        self.assertEqual(snapshot["cancellations_total"], 1)
+        self.assertEqual(snapshot["errors_total"], 0)
+        self.assertEqual(snapshot["success_rate"], 0.0)
+        self.assertEqual(snapshot["routes"]["web"]["cancellations"], 1)
+
     def test_snapshot_reports_route_reliability_and_tail_latency(self) -> None:
         logger, _ = capturing_logger()
         telemetry = AgentTelemetry(
@@ -152,6 +171,7 @@ class AgentTelemetryTests(unittest.TestCase):
             {
                 "invocations": 1,
                 "errors": 1,
+                "cancellations": 0,
                 "success_rate": 0.0,
                 "latency_samples": 0,
                 "p50_latency_ms": 0.0,
@@ -168,7 +188,7 @@ class AgentTelemetryTests(unittest.TestCase):
         logger, _ = capturing_logger()
         telemetry = AgentTelemetry(
             logger=logger,
-            clock=FakeClock(0.0, 0.01, 1.0, 1.03),
+            clock=FakeClock(0.0, 0.01, 1.0, 1.03, 2.0, 2.04),
         )
         success = telemetry.start()
         success.set_route("math")
@@ -176,13 +196,20 @@ class AgentTelemetryTests(unittest.TestCase):
         failure = telemetry.start()
         failure.set_route("math")
         failure.fail(TimeoutError())
+        cancellation = telemetry.start()
+        cancellation.set_route("web")
+        cancellation.cancel()
 
         metrics = telemetry.prometheus_snapshot()
 
         self.assertIn("# TYPE a2a_agent_invocations_total counter", metrics)
-        self.assertIn("a2a_agent_invocations_total 2", metrics)
+        self.assertIn("a2a_agent_invocations_total 3", metrics)
         self.assertIn("a2a_agent_errors_total 1", metrics)
+        self.assertIn("a2a_agent_cancellations_total 1", metrics)
         self.assertIn('a2a_agent_route_invocations_total{route="math"} 2', metrics)
+        self.assertIn(
+            'a2a_agent_route_cancellations_total{route="web"} 1', metrics
+        )
         self.assertIn(
             'a2a_agent_route_latency_milliseconds{route="math",quantile="0.95"} 30.0',
             metrics,

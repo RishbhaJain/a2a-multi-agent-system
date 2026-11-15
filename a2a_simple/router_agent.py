@@ -1,5 +1,6 @@
-from collections.abc import Awaitable, Callable
+import asyncio
 import re
+from collections.abc import Awaitable, Callable
 from typing import Optional
 
 from agent_resilience import (
@@ -93,6 +94,9 @@ class RouterAgent:
 
             span.finish()
             return result
+        except asyncio.CancelledError:
+            span.cancel()
+            raise
         except Exception as error:
             span.fail(error)
             return (
