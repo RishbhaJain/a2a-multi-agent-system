@@ -343,6 +343,41 @@ class AgentResilienceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(breaker.snapshot()["code"]["consecutive_failures"], 0)
         self.assertEqual(bulkhead.snapshot()["code"]["in_flight"], 0)
 
+    async def test_router_records_and_propagates_request_cancellation(self) -> None:
+        entered = asyncio.Event()
+
+        class BlockingAgent:
+            async def invoke(self, *_args, **_kwargs) -> str:
+                entered.set()
+                await asyncio.Event().wait()
+                return "unreachable"
+
+        router = RouterAgent.__new__(RouterAgent)
+        router.math_agent = BlockingAgent()
+        router.telemetry = AgentTelemetry()
+        router.agent_timeout_seconds = 10
+        router.circuit_breaker = CircuitBreaker(failure_threshold=1)
+        router.bulkhead = AgentBulkhead(max_in_flight_per_route=1)
+
+        task = asyncio.create_task(
+            router.invoke("Calculate 2 + 2", request_id="req-cancelled")
+        )
+        await entered.wait()
+        task.cancel()
+
+        with self.assertRaises(asyncio.CancelledError):
+            await task
+
+        snapshot = router.operational_snapshot()
+        self.assertEqual(snapshot["invocations_total"], 1)
+        self.assertEqual(snapshot["cancellations_total"], 1)
+        self.assertEqual(snapshot["errors_total"], 0)
+        self.assertEqual(snapshot["routes"]["math"]["success_rate"], 0.0)
+        self.assertEqual(
+            router.circuit_breaker.snapshot()["math"]["consecutive_failures"], 0
+        )
+        self.assertEqual(router.bulkhead.snapshot()["math"]["in_flight"], 0)
+
     async def test_bulkhead_rejects_saturated_route_without_queueing(self) -> None:
         breaker = CircuitBreaker()
         bulkhead = AgentBulkhead(max_in_flight_per_route=1)

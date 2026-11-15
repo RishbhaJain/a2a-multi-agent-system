@@ -143,6 +143,10 @@ class InvocationSpan:
         """Record only an exception class, never its potentially sensitive text."""
         return self.finish("error", error_type=type(error).__name__)
 
+    def cancel(self) -> InvocationEvent:
+        """Record client or task cancellation separately from provider failure."""
+        return self.finish("cancelled")
+
 
 class AgentTelemetry:
     """Emits JSON traces and maintains process-local aggregate metrics."""
@@ -164,8 +168,10 @@ class AgentTelemetry:
         self._events: deque[InvocationEvent] = deque(maxlen=max_events)
         self._invocations_total = 0
         self._errors_total = 0
+        self._cancellations_total = 0
         self._route_invocations_total: dict[str, int] = defaultdict(int)
         self._route_errors_total: dict[str, int] = defaultdict(int)
+        self._route_cancellations_total: dict[str, int] = defaultdict(int)
 
     @staticmethod
     def _default_logger() -> logging.Logger:
@@ -208,9 +214,12 @@ class AgentTelemetry:
             self._events.append(event)
             self._invocations_total += 1
             self._route_invocations_total[event.route] += 1
-            if event.outcome != "success":
+            if event.outcome == "error":
                 self._errors_total += 1
                 self._route_errors_total[event.route] += 1
+            elif event.outcome == "cancelled":
+                self._cancellations_total += 1
+                self._route_cancellations_total[event.route] += 1
         self.logger.info(
             "%s", json.dumps(asdict(event), sort_keys=True, separators=(",", ":"))
         )
@@ -221,8 +230,10 @@ class AgentTelemetry:
             events = tuple(self._events)
             invocations_total = self._invocations_total
             errors_total = self._errors_total
+            cancellations_total = self._cancellations_total
             route_invocations_total = dict(self._route_invocations_total)
             route_errors_total = dict(self._route_errors_total)
+            route_cancellations_total = dict(self._route_cancellations_total)
 
         grouped: dict[str, list[InvocationEvent]] = defaultdict(list)
         for event in events:
@@ -231,8 +242,11 @@ class AgentTelemetry:
         return {
             "invocations_total": invocations_total,
             "errors_total": errors_total,
+            "cancellations_total": cancellations_total,
             "success_rate": round(
-                (invocations_total - errors_total) / invocations_total, 4
+                (invocations_total - errors_total - cancellations_total)
+                / invocations_total,
+                4,
             )
             if invocations_total
             else 1.0,
@@ -243,6 +257,7 @@ class AgentTelemetry:
                     grouped.get(route, []),
                     invocations_total=route_invocations_total[route],
                     errors_total=route_errors_total.get(route, 0),
+                    cancellations_total=route_cancellations_total.get(route, 0),
                 )
                 for route in sorted(route_invocations_total)
             },
@@ -258,6 +273,9 @@ class AgentTelemetry:
             "# HELP a2a_agent_errors_total Failed agent invocations since process start.",
             "# TYPE a2a_agent_errors_total counter",
             f"a2a_agent_errors_total {snapshot['errors_total']}",
+            "# HELP a2a_agent_cancellations_total Cancelled agent invocations since process start.",
+            "# TYPE a2a_agent_cancellations_total counter",
+            f"a2a_agent_cancellations_total {snapshot['cancellations_total']}",
             "# HELP a2a_agent_success_ratio Successful invocation ratio since process start.",
             "# TYPE a2a_agent_success_ratio gauge",
             f"a2a_agent_success_ratio {snapshot['success_rate']}",
@@ -268,6 +286,8 @@ class AgentTelemetry:
             "# TYPE a2a_agent_route_invocations_total counter",
             "# HELP a2a_agent_route_errors_total Failed invocations by selected route.",
             "# TYPE a2a_agent_route_errors_total counter",
+            "# HELP a2a_agent_route_cancellations_total Cancelled invocations by selected route.",
+            "# TYPE a2a_agent_route_cancellations_total counter",
             "# HELP a2a_agent_route_success_ratio Successful invocation ratio by route.",
             "# TYPE a2a_agent_route_success_ratio gauge",
             "# HELP a2a_agent_route_latency_samples Retained latency samples by route.",
@@ -283,6 +303,7 @@ class AgentTelemetry:
                 [
                     f"a2a_agent_route_invocations_total{{{labels}}} {metrics['invocations']}",
                     f"a2a_agent_route_errors_total{{{labels}}} {metrics['errors']}",
+                    f"a2a_agent_route_cancellations_total{{{labels}}} {metrics['cancellations']}",
                     f"a2a_agent_route_success_ratio{{{labels}}} {metrics['success_rate']}",
                     f"a2a_agent_route_latency_samples{{{labels}}} {metrics['latency_samples']}",
                     (
@@ -308,14 +329,18 @@ class AgentTelemetry:
         *,
         invocations_total: int,
         errors_total: int,
+        cancellations_total: int,
     ) -> dict[str, float | int]:
         """Return exact route totals plus latency metrics from retained samples."""
         latencies = sorted(event.latency_ms for event in events)
         return {
             "invocations": invocations_total,
             "errors": errors_total,
+            "cancellations": cancellations_total,
             "success_rate": round(
-                (invocations_total - errors_total) / invocations_total, 4
+                (invocations_total - errors_total - cancellations_total)
+                / invocations_total,
+                4,
             ),
             "latency_samples": len(latencies),
             "p50_latency_ms": AgentTelemetry._percentile(latencies, 0.50),

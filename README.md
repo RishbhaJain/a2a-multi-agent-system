@@ -32,7 +32,7 @@ gates make the measurements reproducible.
 - Golden-set and perturbation evaluation harnesses with versioned failure matrices
 - A constrained Python runner with policy denials, resource limits, and safety tests
 - Fail-closed browser URL validation that blocks local, private, and reserved networks
-- Production reliability controls, single-probe circuit recovery, typed failure propagation, and bounded, privacy-safe route-level telemetry with Prometheus export
+- Production reliability controls, single-probe circuit recovery, typed failure propagation, and cancellation-aware, privacy-safe route-level telemetry with Prometheus export
 - Thread-safe persistent memory with atomic commits and fail-closed corruption handling
 
 ## System at a glance
