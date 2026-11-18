@@ -48,8 +48,23 @@ RULES: dict[str, tuple[tuple[str, int], ...]] = {
 }
 
 
-def classify_question(question: str) -> RoutingDecision:
-    """Classify a request using weighted, auditable rules."""
+def classify_question(
+    question: str,
+    *,
+    min_confident_score: int = MIN_CONFIDENT_SCORE,
+    min_confident_margin: int = MIN_CONFIDENT_MARGIN,
+    min_ambiguous_runner_up_score: int = MIN_AMBIGUOUS_RUNNER_UP_SCORE,
+) -> RoutingDecision:
+    """Classify a request using weighted rules and explicit abstention thresholds."""
+    thresholds = {
+        "min_confident_score": min_confident_score,
+        "min_confident_margin": min_confident_margin,
+        "min_ambiguous_runner_up_score": min_ambiguous_runner_up_score,
+    }
+    for name, value in thresholds.items():
+        if type(value) is not int or value < 0:
+            raise ValueError(f"{name} must be a non-negative integer")
+
     normalized = " ".join(question.lower().split())
     scores = {route: 0 for route in ROUTE_PRIORITY}
     matches = {route: [] for route in ROUTE_PRIORITY}
@@ -69,7 +84,7 @@ def classify_question(question: str) -> RoutingDecision:
     runner_up_score = scores[runner_up]
     score_margin = winning_score - runner_up_score
 
-    if winning_score < MIN_CONFIDENT_SCORE:
+    if winning_score < min_confident_score:
         return RoutingDecision(
             "unknown",
             scores,
@@ -79,8 +94,8 @@ def classify_question(question: str) -> RoutingDecision:
         )
 
     if (
-        runner_up_score >= MIN_AMBIGUOUS_RUNNER_UP_SCORE
-        and score_margin < MIN_CONFIDENT_MARGIN
+        runner_up_score >= min_ambiguous_runner_up_score
+        and score_margin < min_confident_margin
     ):
         return RoutingDecision(
             "unknown",

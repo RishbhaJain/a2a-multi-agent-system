@@ -306,6 +306,21 @@ requests.
 |---:|---:|---:|---:|---:|
 | 18 | **100.0%** | **100.0%** | **100.0%** | **0.0%** |
 
+The evaluator also sweeps the routing-margin threshold instead of reporting only
+the chosen operating point. This makes the coverage versus false-route tradeoff
+visible on the checked-in suite:
+
+| Minimum margin | Routed coverage | Selective accuracy | False-route rate |
+|---:|---:|---:|---:|
+| 0 | 77.8% | 71.4% | 50.0% |
+| 1 | 66.7% | 83.3% | 25.0% |
+| 2 | 55.6% | **100.0%** | **0.0%** |
+| 3 (production) | 55.6% | **100.0%** | **0.0%** |
+
+The smallest zero-false-route margin is 2 on this 18-case suite. Production
+keeps margin 3; the sweep is evidence about this benchmark, not a claim that the
+threshold is calibrated for arbitrary traffic.
+
 ```bash
 PYTHONPATH=a2a_simple python -m evals.evaluate_selective_routing \
   --dataset a2a_simple/evals/selective_routing_scenarios.jsonl \

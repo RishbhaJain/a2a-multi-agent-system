@@ -8,10 +8,11 @@ from collections import Counter
 from pathlib import Path
 
 from evals.evaluate_router import load_scenarios
-from routing_policy import ROUTE_PRIORITY, classify_question
+from routing_policy import MIN_CONFIDENT_MARGIN, ROUTE_PRIORITY, classify_question
 
 
 EXPECTED_KINDS = {"in_domain", "out_of_domain", "ambiguous"}
+MARGIN_SWEEP = tuple(range(MIN_CONFIDENT_MARGIN + 1))
 
 
 def _ratio(numerator: int, denominator: int) -> float:
@@ -45,10 +46,9 @@ def _validate_scenarios(scenarios: list[dict[str, object]]) -> None:
         raise ValueError(f"dataset is missing scenario kinds: {sorted(missing)}")
 
 
-def evaluate(dataset_path: Path) -> dict[str, object]:
-    scenarios = load_scenarios(dataset_path)
-    _validate_scenarios(scenarios)
-
+def _evaluate_scenarios(
+    scenarios: list[dict[str, object]], *, min_confident_margin: int
+) -> tuple[dict[str, object], list[dict[str, object]]]:
     rows = []
     kind_counts: Counter[str] = Counter()
     kind_correct: Counter[str] = Counter()
@@ -57,22 +57,30 @@ def evaluate(dataset_path: Path) -> dict[str, object]:
     abstention_total = 0
     abstention_correct = 0
     false_routes = 0
+    routed_total = 0
+    routed_correct = 0
 
     for scenario in scenarios:
-        decision = classify_question(str(scenario["prompt"]))
+        decision = classify_question(
+            str(scenario["prompt"]),
+            min_confident_margin=min_confident_margin,
+        )
         expected_tool = str(scenario["expected_tool"])
         kind = str(scenario["kind"])
         correct = decision.tool == expected_tool
+        routed = decision.tool != "unknown"
         kind_counts[kind] += 1
         kind_correct[kind] += int(correct)
+        routed_total += int(routed)
+        routed_correct += int(routed and correct)
 
         if kind == "in_domain":
-            in_domain_routed += int(decision.tool != "unknown")
+            in_domain_routed += int(routed)
             in_domain_correct += int(correct)
         else:
             abstention_total += 1
             abstention_correct += int(decision.tool == "unknown")
-            false_routes += int(decision.tool != "unknown")
+            false_routes += int(routed)
 
         rows.append(
             {
@@ -91,6 +99,10 @@ def evaluate(dataset_path: Path) -> dict[str, object]:
     metrics = {
         "scenario_count": total,
         "routing_accuracy": _ratio(sum(kind_correct.values()), total),
+        "routed_count": routed_total,
+        "coverage": _ratio(routed_total, total),
+        "selective_accuracy": _ratio(routed_correct, routed_total),
+        "selective_risk": round(1 - _ratio(routed_correct, routed_total), 4),
         "in_domain_coverage": _ratio(in_domain_routed, kind_counts["in_domain"]),
         "in_domain_accuracy": _ratio(in_domain_correct, kind_counts["in_domain"]),
         "abstention_recall": _ratio(abstention_correct, abstention_total),
@@ -103,11 +115,58 @@ def evaluate(dataset_path: Path) -> dict[str, object]:
             for kind in sorted(EXPECTED_KINDS)
         },
     }
+    return metrics, rows
+
+
+def _risk_coverage_curve(
+    scenarios: list[dict[str, object]],
+) -> dict[str, object]:
+    operating_points = []
+    for margin in MARGIN_SWEEP:
+        metrics, _ = _evaluate_scenarios(
+            scenarios,
+            min_confident_margin=margin,
+        )
+        operating_points.append(
+            {
+                "min_confident_margin": margin,
+                "routed_count": metrics["routed_count"],
+                "coverage": metrics["coverage"],
+                "selective_accuracy": metrics["selective_accuracy"],
+                "selective_risk": metrics["selective_risk"],
+                "abstention_recall": metrics["abstention_recall"],
+                "false_route_rate": metrics["false_route_rate"],
+            }
+        )
+    minimum_zero_false_route_margin = next(
+        (
+            point["min_confident_margin"]
+            for point in operating_points
+            if point["false_route_rate"] == 0.0
+        ),
+        None,
+    )
     return {
-        "schema_version": 1,
+        "swept_parameter": "min_confident_margin",
+        "production_margin": MIN_CONFIDENT_MARGIN,
+        "minimum_zero_false_route_margin": minimum_zero_false_route_margin,
+        "operating_points": operating_points,
+    }
+
+
+def evaluate(dataset_path: Path) -> dict[str, object]:
+    scenarios = load_scenarios(dataset_path)
+    _validate_scenarios(scenarios)
+    metrics, rows = _evaluate_scenarios(
+        scenarios,
+        min_confident_margin=MIN_CONFIDENT_MARGIN,
+    )
+    return {
+        "schema_version": 2,
         "dataset": dataset_path.name,
         "policy": "margin_abstention_v1",
         "metrics": metrics,
+        "risk_coverage_curve": _risk_coverage_curve(scenarios),
         "failures": [row for row in rows if not row["correct"]],
         "decisions": rows,
         "regression_gate": {
@@ -115,6 +174,7 @@ def evaluate(dataset_path: Path) -> dict[str, object]:
             "in_domain_accuracy_min": 1.0,
             "abstention_recall_min": 1.0,
             "false_route_rate_max": 0.0,
+            "minimum_zero_false_route_margin_max": MIN_CONFIDENT_MARGIN,
         },
     }
 
@@ -143,6 +203,28 @@ def check_regression(result: dict[str, object], baseline_path: Path) -> None:
         errors.append(
             "false_route_rate regressed from "
             f"{prior['false_route_rate']} to {current['false_route_rate']}"
+        )
+    curve = result["risk_coverage_curve"]
+    zero_false_route_margin = curve["minimum_zero_false_route_margin"]
+    maximum_margin = gate["minimum_zero_false_route_margin_max"]
+    if zero_false_route_margin is None or zero_false_route_margin > maximum_margin:
+        errors.append(
+            "risk-coverage sweep does not reach zero false routes by "
+            f"margin {maximum_margin}"
+        )
+    prior_curve = baseline.get("risk_coverage_curve")
+    prior_zero_false_route_margin = (
+        prior_curve.get("minimum_zero_false_route_margin") if prior_curve else None
+    )
+    if (
+        zero_false_route_margin is not None
+        and prior_zero_false_route_margin is not None
+        and zero_false_route_margin > prior_zero_false_route_margin
+    ):
+        errors.append(
+            "minimum zero-false-route margin regressed from "
+            f"{prior_zero_false_route_margin} to "
+            f"{zero_false_route_margin}"
         )
     if errors:
         raise SystemExit("; ".join(errors))

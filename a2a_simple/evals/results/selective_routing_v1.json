@@ -1,10 +1,14 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "dataset": "selective_routing_scenarios.jsonl",
   "policy": "margin_abstention_v1",
   "metrics": {
     "scenario_count": 18,
     "routing_accuracy": 1.0,
+    "routed_count": 10,
+    "coverage": 0.5556,
+    "selective_accuracy": 1.0,
+    "selective_risk": 0.0,
     "in_domain_coverage": 1.0,
     "in_domain_accuracy": 1.0,
     "abstention_recall": 1.0,
@@ -23,6 +27,49 @@
         "accuracy": 1.0
       }
     }
+  },
+  "risk_coverage_curve": {
+    "swept_parameter": "min_confident_margin",
+    "production_margin": 3,
+    "minimum_zero_false_route_margin": 2,
+    "operating_points": [
+      {
+        "min_confident_margin": 0,
+        "routed_count": 14,
+        "coverage": 0.7778,
+        "selective_accuracy": 0.7143,
+        "selective_risk": 0.2857,
+        "abstention_recall": 0.5,
+        "false_route_rate": 0.5
+      },
+      {
+        "min_confident_margin": 1,
+        "routed_count": 12,
+        "coverage": 0.6667,
+        "selective_accuracy": 0.8333,
+        "selective_risk": 0.1667,
+        "abstention_recall": 0.75,
+        "false_route_rate": 0.25
+      },
+      {
+        "min_confident_margin": 2,
+        "routed_count": 10,
+        "coverage": 0.5556,
+        "selective_accuracy": 1.0,
+        "selective_risk": 0.0,
+        "abstention_recall": 1.0,
+        "false_route_rate": 0.0
+      },
+      {
+        "min_confident_margin": 3,
+        "routed_count": 10,
+        "coverage": 0.5556,
+        "selective_accuracy": 1.0,
+        "selective_risk": 0.0,
+        "abstention_recall": 1.0,
+        "false_route_rate": 0.0
+      }
+    ]
   },
   "failures": [],
   "decisions": [
@@ -319,7 +366,7 @@
     "in_domain_coverage_min": 1.0,
     "in_domain_accuracy_min": 1.0,
     "abstention_recall_min": 1.0,
-    "false_route_rate_max": 0.0
+    "false_route_rate_max": 0.0,
+    "minimum_zero_false_route_margin_max": 3
   }
 }
-
