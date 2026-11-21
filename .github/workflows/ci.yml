@@ -23,8 +23,17 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install agent dependencies
-        run: python -m pip install -e ./a2a_simple
+      - name: Set up uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.13.9"
+          enable-cache: true
+          cache-dependency-glob: a2a_simple/uv.lock
+
+      - name: Install locked agent dependencies
+        run: |
+          uv sync --locked --directory a2a_simple
+          echo "$GITHUB_WORKSPACE/a2a_simple/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Compile evaluation and execution modules
         run: |
