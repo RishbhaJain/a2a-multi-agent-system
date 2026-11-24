@@ -4,6 +4,12 @@ import json
 import logging
 import unittest
 
+from agent_resilience import (
+    AgentCallTimeout,
+    AgentCircuitOpen,
+    AgentOperationError,
+    AgentRouteSaturated,
+)
 from telemetry import AgentTelemetry, render_resilience_prometheus
 
 
@@ -77,7 +83,35 @@ class AgentTelemetryTests(unittest.TestCase):
         payload = json.loads(stream.getvalue())
         self.assertEqual(payload["outcome"], "error")
         self.assertEqual(payload["error_type"], "ValueError")
+        self.assertEqual(payload["failure_category"], "internal")
         self.assertNotIn("secret provider response", stream.getvalue())
+
+    def test_failure_categories_distinguish_operational_causes(self) -> None:
+        logger, _ = capturing_logger()
+        telemetry = AgentTelemetry(
+            logger=logger,
+            clock=FakeClock(*range(10)),
+        )
+        failures = [
+            (AgentCallTimeout(), "timeout"),
+            (AgentCircuitOpen(), "circuit_open"),
+            (AgentRouteSaturated(), "saturated"),
+            (AgentOperationError(), "operation"),
+            (RuntimeError(), "internal"),
+        ]
+
+        for error, _category in failures:
+            span = telemetry.start()
+            span.set_route("web")
+            span.fail(error)
+
+        expected = {category: 1 for _error, category in failures}
+        snapshot = telemetry.snapshot()
+        self.assertEqual(snapshot["failure_categories"], dict(sorted(expected.items())))
+        self.assertEqual(
+            snapshot["routes"]["web"]["failure_categories"],
+            dict(sorted(expected.items())),
+        )
 
     def test_cancellation_is_visible_without_becoming_provider_error(self) -> None:
         logger, stream = capturing_logger()
@@ -92,6 +126,7 @@ class AgentTelemetryTests(unittest.TestCase):
         self.assertEqual(event.outcome, "cancelled")
         self.assertEqual(payload["outcome"], "cancelled")
         self.assertIsNone(payload["error_type"])
+        self.assertIsNone(payload["failure_category"])
         self.assertEqual(snapshot["invocations_total"], 1)
         self.assertEqual(snapshot["cancellations_total"], 1)
         self.assertEqual(snapshot["errors_total"], 0)
@@ -171,6 +206,7 @@ class AgentTelemetryTests(unittest.TestCase):
             {
                 "invocations": 1,
                 "errors": 1,
+                "failure_categories": {"internal": 1},
                 "cancellations": 0,
                 "success_rate": 0.0,
                 "latency_samples": 0,
@@ -205,10 +241,15 @@ class AgentTelemetryTests(unittest.TestCase):
         self.assertIn("# TYPE a2a_agent_invocations_total counter", metrics)
         self.assertIn("a2a_agent_invocations_total 3", metrics)
         self.assertIn("a2a_agent_errors_total 1", metrics)
+        self.assertIn('a2a_agent_failures_total{category="timeout"} 1', metrics)
         self.assertIn("a2a_agent_cancellations_total 1", metrics)
         self.assertIn('a2a_agent_route_invocations_total{route="math"} 2', metrics)
         self.assertIn(
             'a2a_agent_route_cancellations_total{route="web"} 1', metrics
+        )
+        self.assertIn(
+            'a2a_agent_route_failures_total{route="math",category="timeout"} 1',
+            metrics,
         )
         self.assertIn(
             'a2a_agent_route_latency_milliseconds{route="math",quantile="0.95"} 30.0',
