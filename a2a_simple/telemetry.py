@@ -15,13 +15,35 @@ import secrets
 import threading
 import time
 import uuid
-from collections import defaultdict, deque
+from collections import Counter, defaultdict, deque
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Callable
 
+from agent_resilience import (
+    AgentCallTimeout,
+    AgentCircuitOpen,
+    AgentOperationError,
+    AgentRouteSaturated,
+)
+
 
 _CIRCUIT_STATES = ("closed", "open", "half_open")
+_FAILURE_CATEGORIES = (
+    (AgentCallTimeout, "timeout"),
+    (TimeoutError, "timeout"),
+    (AgentCircuitOpen, "circuit_open"),
+    (AgentRouteSaturated, "saturated"),
+    (AgentOperationError, "operation"),
+)
+
+
+def classify_failure(error: BaseException) -> str:
+    """Map exception types to bounded, content-safe operational categories."""
+    for error_type, category in _FAILURE_CATEGORIES:
+        if isinstance(error, error_type):
+            return category
+    return "internal"
 
 
 def render_resilience_prometheus(
@@ -83,6 +105,7 @@ class InvocationEvent:
     input_text_chars: int
     input_image_bytes: int
     error_type: str | None
+    failure_category: str | None
     timestamp: str
     event: str = "agent_invocation"
 
@@ -120,6 +143,7 @@ class InvocationSpan:
         outcome: str = "success",
         *,
         error_type: str | None = None,
+        failure_category: str | None = None,
     ) -> InvocationEvent:
         """Finish once and return the original event on repeated calls."""
         if self._event is not None:
@@ -134,6 +158,9 @@ class InvocationSpan:
             input_text_chars=self._input_text_chars,
             input_image_bytes=self._input_image_bytes,
             error_type=error_type,
+            failure_category=(failure_category or "internal")
+            if outcome == "error"
+            else None,
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
         self._telemetry.record(self._event)
@@ -141,7 +168,11 @@ class InvocationSpan:
 
     def fail(self, error: BaseException) -> InvocationEvent:
         """Record only an exception class, never its potentially sensitive text."""
-        return self.finish("error", error_type=type(error).__name__)
+        return self.finish(
+            "error",
+            error_type=type(error).__name__,
+            failure_category=classify_failure(error),
+        )
 
     def cancel(self) -> InvocationEvent:
         """Record client or task cancellation separately from provider failure."""
@@ -172,6 +203,10 @@ class AgentTelemetry:
         self._route_invocations_total: dict[str, int] = defaultdict(int)
         self._route_errors_total: dict[str, int] = defaultdict(int)
         self._route_cancellations_total: dict[str, int] = defaultdict(int)
+        self._failure_categories_total: Counter[str] = Counter()
+        self._route_failure_categories_total: dict[str, Counter[str]] = defaultdict(
+            Counter
+        )
 
     @staticmethod
     def _default_logger() -> logging.Logger:
@@ -217,6 +252,9 @@ class AgentTelemetry:
             if event.outcome == "error":
                 self._errors_total += 1
                 self._route_errors_total[event.route] += 1
+                category = event.failure_category or "internal"
+                self._failure_categories_total[category] += 1
+                self._route_failure_categories_total[event.route][category] += 1
             elif event.outcome == "cancelled":
                 self._cancellations_total += 1
                 self._route_cancellations_total[event.route] += 1
@@ -234,6 +272,11 @@ class AgentTelemetry:
             route_invocations_total = dict(self._route_invocations_total)
             route_errors_total = dict(self._route_errors_total)
             route_cancellations_total = dict(self._route_cancellations_total)
+            failure_categories_total = dict(self._failure_categories_total)
+            route_failure_categories_total = {
+                route: dict(categories)
+                for route, categories in self._route_failure_categories_total.items()
+            }
 
         grouped: dict[str, list[InvocationEvent]] = defaultdict(list)
         for event in events:
@@ -242,6 +285,7 @@ class AgentTelemetry:
         return {
             "invocations_total": invocations_total,
             "errors_total": errors_total,
+            "failure_categories": dict(sorted(failure_categories_total.items())),
             "cancellations_total": cancellations_total,
             "success_rate": round(
                 (invocations_total - errors_total - cancellations_total)
@@ -258,6 +302,9 @@ class AgentTelemetry:
                     invocations_total=route_invocations_total[route],
                     errors_total=route_errors_total.get(route, 0),
                     cancellations_total=route_cancellations_total.get(route, 0),
+                    failure_categories_total=route_failure_categories_total.get(
+                        route, {}
+                    ),
                 )
                 for route in sorted(route_invocations_total)
             },
@@ -273,6 +320,8 @@ class AgentTelemetry:
             "# HELP a2a_agent_errors_total Failed agent invocations since process start.",
             "# TYPE a2a_agent_errors_total counter",
             f"a2a_agent_errors_total {snapshot['errors_total']}",
+            "# HELP a2a_agent_failures_total Failed invocations by operational category.",
+            "# TYPE a2a_agent_failures_total counter",
             "# HELP a2a_agent_cancellations_total Cancelled agent invocations since process start.",
             "# TYPE a2a_agent_cancellations_total counter",
             f"a2a_agent_cancellations_total {snapshot['cancellations_total']}",
@@ -286,6 +335,8 @@ class AgentTelemetry:
             "# TYPE a2a_agent_route_invocations_total counter",
             "# HELP a2a_agent_route_errors_total Failed invocations by selected route.",
             "# TYPE a2a_agent_route_errors_total counter",
+            "# HELP a2a_agent_route_failures_total Failed invocations by route and operational category.",
+            "# TYPE a2a_agent_route_failures_total counter",
             "# HELP a2a_agent_route_cancellations_total Cancelled invocations by selected route.",
             "# TYPE a2a_agent_route_cancellations_total counter",
             "# HELP a2a_agent_route_success_ratio Successful invocation ratio by route.",
@@ -295,6 +346,11 @@ class AgentTelemetry:
             "# HELP a2a_agent_route_latency_milliseconds Retained-window latency percentile by route.",
             "# TYPE a2a_agent_route_latency_milliseconds gauge",
         ]
+        for category, count in snapshot["failure_categories"].items():
+            category_label = self._prometheus_label(category)
+            lines.append(
+                f'a2a_agent_failures_total{{category="{category_label}"}} {count}'
+            )
         routes = snapshot["routes"]
         for route, metrics in routes.items():
             route_label = self._prometheus_label(route)
@@ -316,6 +372,12 @@ class AgentTelemetry:
                     ),
                 ]
             )
+            for category, count in metrics["failure_categories"].items():
+                category_label = self._prometheus_label(category)
+                lines.append(
+                    "a2a_agent_route_failures_total"
+                    f'{{{labels},category="{category_label}"}} {count}'
+                )
         return "\n".join(lines) + "\n"
 
     @staticmethod
@@ -330,12 +392,14 @@ class AgentTelemetry:
         invocations_total: int,
         errors_total: int,
         cancellations_total: int,
-    ) -> dict[str, float | int]:
+        failure_categories_total: dict[str, int],
+    ) -> dict[str, float | int | dict[str, int]]:
         """Return exact route totals plus latency metrics from retained samples."""
         latencies = sorted(event.latency_ms for event in events)
         return {
             "invocations": invocations_total,
             "errors": errors_total,
+            "failure_categories": dict(sorted(failure_categories_total.items())),
             "cancellations": cancellations_total,
             "success_rate": round(
                 (invocations_total - errors_total - cancellations_total)
