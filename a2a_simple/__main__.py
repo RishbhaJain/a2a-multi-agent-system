@@ -1,3 +1,5 @@
+import asyncio
+
 import uvicorn
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
@@ -8,18 +10,37 @@ from starlette.middleware.cors import CORSMiddleware
 from a2a.server.agent_execution import AgentExecutor
 from a2a.server.agent_execution.context import RequestContext
 from a2a.server.events.event_queue import EventQueue
+from a2a.server.tasks import TaskUpdater
 from a2a.utils import new_agent_text_message, new_agent_parts_message
-from a2a.types import DataPart
+from a2a.types import DataPart, TaskNotCancelableError, TaskState
+from a2a.utils.errors import ServerError
 from starlette.responses import JSONResponse, PlainTextResponse
 
 
 class RouterAgentExecutor(AgentExecutor):
     """Agent executor that uses the Router Agent to handle requests"""
 
-    def __init__(self):
-        self.agent = RouterAgent()
+    def __init__(self, agent: RouterAgent | None = None):
+        self.agent = agent or RouterAgent()
+        self._active_tasks: dict[str, asyncio.Task[None]] = {}
+        self._active_tasks_lock = asyncio.Lock()
 
     async def execute(self, context: RequestContext, event_queue: EventQueue):
+        if context.task_id is None or context.context_id is None:
+            raise ValueError("A2A execution requires task and context identifiers")
+
+        current_task = asyncio.current_task()
+        if current_task is None:
+            raise RuntimeError("A2A execution requires an active asyncio task")
+
+        async with self._active_tasks_lock:
+            if context.task_id in self._active_tasks:
+                raise RuntimeError(f"task {context.task_id!r} is already running")
+            self._active_tasks[context.task_id] = current_task
+
+        updater = TaskUpdater(event_queue, context.task_id, context.context_id)
+        updater.start_work()
+
         # Extract the question and image data from the request context
         question = ""
         image_data = None
@@ -69,21 +90,38 @@ class RouterAgentExecutor(AgentExecutor):
             ),
             None,
         )
-        result = await self.agent.invoke(question, image_data, request_id=request_id)
+        try:
+            result = await self.agent.invoke(
+                question,
+                image_data,
+                request_id=request_id,
+            )
 
-        # Check if this is an image classification response
-        if image_data and self._is_classification_result(result):
-            # Create classification message with DataPart
-            classification_data = {
-                'kind': 'classification',
-                'label': result.strip()
-            }
-            data_part = DataPart(data=classification_data)
-            message = new_agent_parts_message([data_part])
-            event_queue.enqueue_event(message)
-        else:
-            # Use regular text message for other responses
-            event_queue.enqueue_event(new_agent_text_message(result))
+            # Check if this is an image classification response
+            if image_data and self._is_classification_result(result):
+                classification_data = {
+                    "kind": "classification",
+                    "label": result.strip(),
+                }
+                data_part = DataPart(data=classification_data)
+                message = new_agent_parts_message(
+                    [data_part],
+                    context_id=context.context_id,
+                    task_id=context.task_id,
+                )
+            else:
+                message = new_agent_text_message(
+                    result,
+                    context_id=context.context_id,
+                    task_id=context.task_id,
+                )
+            updater.complete(message)
+        except asyncio.CancelledError:
+            updater.update_status(TaskState.canceled, final=True)
+        finally:
+            async with self._active_tasks_lock:
+                if self._active_tasks.get(context.task_id) is current_task:
+                    self._active_tasks.pop(context.task_id)
 
     def _is_classification_result(self, result: str) -> bool:
         """Check if the result is a simple classification label"""
@@ -104,7 +142,15 @@ class RouterAgentExecutor(AgentExecutor):
         return result.lower() in classification_patterns
     
     async def cancel(self, context: RequestContext, event_queue: EventQueue):
-        raise Exception("Cancel not supported")
+        del event_queue
+        if context.task_id is None:
+            raise ServerError(error=TaskNotCancelableError())
+
+        async with self._active_tasks_lock:
+            active_task = self._active_tasks.get(context.task_id)
+            if active_task is None or active_task.done():
+                raise ServerError(error=TaskNotCancelableError())
+            active_task.cancel()
 
 
 def main():
