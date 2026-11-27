@@ -53,6 +53,7 @@ jobs:
             a2a_simple/evals/evaluate_robustness.py \
             a2a_simple/evals/evaluate_execution.py \
             a2a_simple/test_execution_evaluation.py \
+            a2a_simple/test_a2a_task_lifecycle.py \
             a2a_simple/test_agent_failure_propagation.py \
             a2a_simple/test_agent_resilience.py \
             a2a_simple/test_credential_hygiene.py \
@@ -68,6 +69,11 @@ jobs:
         run: |
           python -m unittest a2a_simple.test_agent_resilience -v
           python -m unittest a2a_simple.test_agent_failure_propagation -v
+
+      - name: Test A2A task lifecycle and cancellation
+        env:
+          PYTHONPATH: a2a_simple
+        run: python -m unittest a2a_simple.test_a2a_task_lifecycle -v
 
       - name: Test content-safe agent telemetry
         env:

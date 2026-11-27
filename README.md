@@ -33,6 +33,7 @@ gates make the measurements reproducible.
 - A constrained Python runner with policy denials, resource limits, and safety tests
 - Fail-closed browser URL validation that blocks local, private, and reserved networks
 - Production reliability controls, single-probe circuit recovery, typed failure propagation, and cancellation-aware, privacy-safe route-level telemetry with Prometheus export
+- End-to-end A2A task lifecycle and client cancellation with persisted terminal state
 - Thread-safe persistent memory with atomic commits and fail-closed corruption handling
 
 ## System at a glance
@@ -356,6 +357,12 @@ decision. It does not claim final-answer quality from Gemini or browser tools.
 - `GET /metrics`: Process-local lifetime success/error totals and retained-window p50/p95 metrics by route
 - `GET /metrics/prometheus`: Prometheus text exposition for process and per-route reliability and latency
 - `POST /`: Main A2A message endpoint
+
+Long-running requests are represented as A2A tasks with explicit `working`,
+`completed`, and `canceled` states. A `tasks/cancel` request cancels the active
+agent coroutine, propagates through the router's resilience boundary, releases
+its bulkhead slot or recovery-probe permit, and persists a terminal canceled
+state for both the original caller and later task inspection.
 
 Every invocation also emits a structured JSON trace with a request ID, selected
 route, outcome, latency, and input sizes. Prompt text, uploaded file contents,
